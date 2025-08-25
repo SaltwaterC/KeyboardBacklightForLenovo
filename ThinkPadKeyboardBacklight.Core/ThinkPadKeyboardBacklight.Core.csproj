@@ -6,4 +6,10 @@
     <RootNamespace>ThinkPadKeyboardBacklight</RootNamespace>
     <AssemblyName>ThinkPadKeyboardBacklight.Core</AssemblyName>
   </PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="KeyboardBacklightDrivers.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 </Project>
