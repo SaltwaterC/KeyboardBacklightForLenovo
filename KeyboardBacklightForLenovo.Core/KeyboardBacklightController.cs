@@ -146,7 +146,7 @@ namespace KeyboardBacklightForLenovo
             else
             {
                 string exeDir = AppContext.BaseDirectory;
-                path = Path.Combine(exeDir, "KeyboardBacklightDrivers.json");
+                path = Path.Combine(exeDir, "DriversConfig.json");
             }
 
             if (!File.Exists(path))

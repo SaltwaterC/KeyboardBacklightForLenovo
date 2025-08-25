@@ -69,13 +69,13 @@ internal static class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("KeyboardBacklightForLenovo.Cli (Generic, JSON-driven)");
+        Console.WriteLine("keyboard-backligth");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  get-level [--drivers <path-to-KeyboardBacklightDrivers.json>]");
-        Console.WriteLine("  set-level <off|low|high|0|1|2> [--drivers <path-to-KeyboardBacklightDrivers.json>]");
+        Console.WriteLine("  get-level [--drivers <path-to-DriversConfig.json>]");
+        Console.WriteLine("  set-level <off|low|high|0|1|2> [--drivers <path-to-DriversConfig.json>]");
         Console.WriteLine();
         Console.WriteLine("A JSON driver config file is REQUIRED.");
-        Console.WriteLine("Default: a file named 'KeyboardBacklightDrivers.json' located next to the executable.");
+        Console.WriteLine("Default: a file named 'DriversConfig.json' located next to the executable.");
         Console.WriteLine("Use --drivers to point at a different JSON file if needed.");
     }
 

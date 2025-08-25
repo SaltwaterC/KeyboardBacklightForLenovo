@@ -55,7 +55,7 @@ namespace KeyboardBacklightForLenovo
             {
                 Icon = _iconLow ?? SystemIcons.Application,   // temporary until first sync
                 Visible = true,
-                Text = "ThinkPad Keyboard Backlight Controller"
+                Text = "Keyboard Backlight Controller for Lenovo"
             };
 
             var menu = new WinForms.ContextMenuStrip();
