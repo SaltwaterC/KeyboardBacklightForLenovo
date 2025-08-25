@@ -3,8 +3,8 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>ThinkPadKeyboardBacklight</RootNamespace>
-    <AssemblyName>ThinkPadKeyboardBacklight.Core</AssemblyName>
+    <RootNamespace>KeyboardBacklightForLenovo</RootNamespace>
+    <AssemblyName>KeyboardBacklightForLenovo.Core</AssemblyName>
   </PropertyGroup>
 
 	<ItemGroup>

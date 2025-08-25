@@ -6,8 +6,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>ThinkPadKeyboardBacklight</RootNamespace>
-    <AssemblyName>ThinkPadKeyboardBacklight.Tray</AssemblyName>
+    <RootNamespace>KeyboardBacklightForLenovo</RootNamespace>
+    <AssemblyName>KeyboardBacklightForLenovo.Tray</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -15,7 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ThinkPadKeyboardBacklight.Core\ThinkPadKeyboardBacklight.Core.csproj" />
+    <ProjectReference Include="..\KeyboardBacklightForLenovo.Core\KeyboardBacklightForLenovo.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

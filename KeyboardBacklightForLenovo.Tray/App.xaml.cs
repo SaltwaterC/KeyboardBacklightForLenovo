@@ -10,7 +10,7 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using WinForms = System.Windows.Forms;
 
-namespace ThinkPadKeyboardBacklight
+namespace KeyboardBacklightForLenovo
 {
     public partial class App : System.Windows.Application
     {
@@ -47,9 +47,9 @@ namespace ThinkPadKeyboardBacklight
             base.OnStartup(e);
 
             // Load icons once
-            _iconOff = LoadEmbeddedIcon("ThinkPadKeyboardBacklight.IconOff.ico");
-            _iconLow = LoadEmbeddedIcon("ThinkPadKeyboardBacklight.IconLow.ico");
-            _iconHigh = LoadEmbeddedIcon("ThinkPadKeyboardBacklight.IconHigh.ico");
+            _iconOff = LoadEmbeddedIcon("KeyboardBacklightForLenovo.IconOff.ico");
+            _iconLow = LoadEmbeddedIcon("KeyboardBacklightForLenovo.IconLow.ico");
+            _iconHigh = LoadEmbeddedIcon("KeyboardBacklightForLenovo.IconHigh.ico");
 
             _notifyIcon = new WinForms.NotifyIcon
             {
@@ -135,7 +135,7 @@ namespace ThinkPadKeyboardBacklight
         {
             // Default to 2 (High) if not set
             return (int)(Registry.GetValue(
-                @"HKEY_CURRENT_USER\Software\ThinkPadKeyboardBacklight",
+                @"HKEY_CURRENT_USER\Software\KeyboardBacklightForLenovo",
                 "PreferredLevel",
                 2) ?? 2);
         }
@@ -143,7 +143,7 @@ namespace ThinkPadKeyboardBacklight
         private static void SavePreferredLevel(int level)
         {
             Registry.SetValue(
-                @"HKEY_CURRENT_USER\Software\ThinkPadKeyboardBacklight",
+                @"HKEY_CURRENT_USER\Software\KeyboardBacklightForLenovo",
                 "PreferredLevel",
                 level,
                 RegistryValueKind.DWord

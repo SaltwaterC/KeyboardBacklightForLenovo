@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Win32.SafeHandles;
 
-namespace ThinkPadKeyboardBacklight
+namespace KeyboardBacklightForLenovo
 {
     public sealed class KeyboardBacklightController : IDisposable
     {

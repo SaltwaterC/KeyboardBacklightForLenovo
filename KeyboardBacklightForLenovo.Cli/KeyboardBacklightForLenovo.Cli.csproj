@@ -9,7 +9,7 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\ThinkPadKeyboardBacklight.Core\ThinkPadKeyboardBacklight.Core.csproj" />
+		<ProjectReference Include="..\KeyboardBacklightForLenovo.Core\KeyboardBacklightForLenovo.Core.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@
 // Requires a JSON config file on disk (default: KeyboardBacklightDrivers.json next to the EXE).
 
 using System;
-using ThinkPadKeyboardBacklight;
+using KeyboardBacklightForLenovo;
 
 internal static class Program
 {
@@ -69,7 +69,7 @@ internal static class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("ThinkPadKeyboardBacklight.Cli (Generic, JSON-driven)");
+        Console.WriteLine("KeyboardBacklightForLenovo.Cli (Generic, JSON-driven)");
         Console.WriteLine("Usage:");
         Console.WriteLine("  get-level [--drivers <path-to-KeyboardBacklightDrivers.json>]");
         Console.WriteLine("  set-level <off|low|high|0|1|2> [--drivers <path-to-KeyboardBacklightDrivers.json>]");
