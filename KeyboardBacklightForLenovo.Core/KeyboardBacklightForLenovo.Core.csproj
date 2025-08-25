@@ -1,11 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
+	<OutputType>Library</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>KeyboardBacklightForLenovo</RootNamespace>
     <AssemblyName>KeyboardBacklightForLenovo.Core</AssemblyName>
+    <Platforms>x64;x86</Platforms>
+	<IsPublishable>false</IsPublishable>
+	<UseAppHost>false</UseAppHost>
   </PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<OutputPath>..\bin\x64\Release\</OutputPath>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<OutputPath>..\bin\x64\Debug\</OutputPath>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+		<OutputPath>..\bin\x86\Release\</OutputPath>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+		<OutputPath>..\bin\x86\Debug\</OutputPath>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<Content Include="KeyboardBacklightDrivers.json">

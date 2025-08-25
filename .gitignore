@@ -1,2 +1,6 @@
 .vs/*
 .vscode/*
+bin/*
+obj/*
+*.csproj.user
+*.pubxml.user
