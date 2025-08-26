@@ -29,7 +29,6 @@ internal static class Program
                         throw new ArgumentException("--drivers requires a file path");
                     driversPath = args[i + 1];
 
-                    // remove the two tokens so command parsing is clean
                     var list = new System.Collections.Generic.List<string>(args);
                     list.RemoveAt(i + 1);
                     list.RemoveAt(i);
@@ -104,7 +103,7 @@ internal static class Program
             2 => "High",
             _ => "Unknown"
         };
-        Console.WriteLine($"principal={ctrl.Principal} ({ctrl.Description})  mapped={mapped} ({lvl})");
+        Console.WriteLine($"principal={ctrl.Principal} ({ctrl.Description})  mapped={mapped} ({lvl})  store={PreferredLevelStore.StorePath}");
         return 0;
     }
 
@@ -112,9 +111,8 @@ internal static class Program
     {
         ctrl.SetStatusNoVerify((int)level);
         int now = ctrl.GetStatus();
-        Console.WriteLine($"Set {level} OK -> principal={ctrl.Principal} ({ctrl.Description}) now={now}");
-        // Optional: persist as preferred so future 'reset' uses this level:
         PreferredLevelStore.SavePreferredLevel((int)level);
+        Console.WriteLine($"Set {level} OK -> principal={ctrl.Principal} ({ctrl.Description}) now={now}  store={PreferredLevelStore.StorePath}");
         return 0;
     }
 
@@ -122,13 +120,14 @@ internal static class Program
     {
         int preferred = PreferredLevelStore.ReadPreferredLevel();
         ctrl.ResetStatus(preferred);
-        Console.WriteLine($"Reset applied -> preferred={preferred} principal={ctrl.Principal} ({ctrl.Description})");
+        Console.WriteLine($"Reset applied -> preferred={preferred} principal={ctrl.Principal} ({ctrl.Description})  store={PreferredLevelStore.StorePath}");
         return 0;
     }
 
     private static int CmdWatch(KeyboardBacklightController ctrl)
     {
         Console.WriteLine("Watching power/session/screen events. Press Ctrl+C to exit.");
+        Console.WriteLine($"Preference store: {PreferredLevelStore.StorePath}");
 
         using var watcher = new PowerEventsWatcher(
             onTrigger: evt =>
