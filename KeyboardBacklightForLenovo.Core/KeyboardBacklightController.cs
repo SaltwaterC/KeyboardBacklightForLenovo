@@ -97,8 +97,18 @@ namespace KeyboardBacklightForLenovo
 
         public void SetStatus(int level)
         {
+            SetStatusNoVerify(level);
+
+            System.Threading.Thread.Sleep(40);
+            int now = GetStatus();
+            if (now != level)
+                throw new InvalidOperationException($"Set did not take effect. Requested {level} but device reports {now}.");
+        }
+
+        public void SetStatusNoVerify(int level)
+        {
             if ((uint)level > 2)
-                throw new ArgumentOutOfRangeException(nameof(level), "Backlight level must be 0 (Off), 1 (Low), or 2 (High).");
+                throw new ArgumentOutOfRangeException(nameof(level), "Backlight level must be 0/1/2.");
 
             uint payload = level switch
             {
@@ -108,21 +118,14 @@ namespace KeyboardBacklightForLenovo
                 _ => throw new ArgumentOutOfRangeException(nameof(level))
             };
 
-            byte[] inBuf = BitConverter.GetBytes(payload); // always 4 bytes
-
-            // NOTE: EnergyDrv fails when lpOutBuffer is null. Provide a small out buffer and ignore the content.
-            byte[] outBuf = new byte[16];
+            byte[] inBuf = BitConverter.GetBytes(payload);
+            byte[] outBuf = new byte[16]; // EnergyDrv dislikes null out buffer
 
             if (!DeviceIoControl(_handle, _driver.SetIoctl, inBuf, inBuf.Length, outBuf, outBuf.Length, out _, IntPtr.Zero))
             {
                 var err = Marshal.GetLastWin32Error();
                 throw new Win32Exception(err, $"DeviceIoControl(SET 0x{_driver.SetIoctl:X8}) failed");
             }
-
-            System.Threading.Thread.Sleep(40);
-            int now = GetStatus();
-            if (now != level)
-                throw new InvalidOperationException($"Set did not take effect. Requested {level} but device reports {now}.");
         }
 
         public void ResetStatus(int expectedStatus)
@@ -214,7 +217,7 @@ namespace KeyboardBacklightForLenovo
             public string? Principal { get; set; }
             public string? Description { get; set; }
             public string? GetIoctl { get; set; }
-            public string? GetIn { get; set; }       // optional GET input payload (EnergyDrv)
+            public string? GetIn { get; set; }       // optional GET input payload (e.g. EnergyDrv)
             public string? GetOff { get; set; }
             public string? GetLow { get; set; }
             public string? GetHigh { get; set; }

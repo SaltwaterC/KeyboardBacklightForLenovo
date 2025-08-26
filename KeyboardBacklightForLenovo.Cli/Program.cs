@@ -1,7 +1,8 @@
 ﻿// Generic, JSON-driven CLI for ThinkPad/ThinkBook keyboard backlight
-// Requires a JSON config file on disk (default: KeyboardBacklightDrivers.json next to the EXE).
+// Requires a JSON config file on disk (default: DriversConfig.json next to the EXE).
 
 using System;
+using Microsoft.Win32;
 using KeyboardBacklightForLenovo;
 
 internal static class Program
@@ -54,6 +55,12 @@ internal static class Program
                         throw new ArgumentException("Invalid level. Use off|low|high|0|1|2");
                     return CmdSetLevel(ctrl, level);
 
+                case "reset":
+                    return CmdReset(ctrl);
+
+                case "watch":
+                    return CmdWatch(ctrl);
+
                 default:
                     Console.Error.WriteLine($"Unknown command: {args[0]}");
                     PrintHelp();
@@ -69,10 +76,12 @@ internal static class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("keyboard-backligth");
+        Console.WriteLine("keyboard-backlight");
         Console.WriteLine("Usage:");
         Console.WriteLine("  get-level [--drivers <path-to-DriversConfig.json>]");
         Console.WriteLine("  set-level <off|low|high|0|1|2> [--drivers <path-to-DriversConfig.json>]");
+        Console.WriteLine("  reset [--drivers <path-to-DriversConfig.json>]");
+        Console.WriteLine("  watch [--drivers <path-to-DriversConfig.json>]");
         Console.WriteLine();
         Console.WriteLine("A JSON driver config file is REQUIRED.");
         Console.WriteLine("Default: a file named 'DriversConfig.json' located next to the executable.");
@@ -101,9 +110,46 @@ internal static class Program
 
     private static int CmdSetLevel(KeyboardBacklightController ctrl, Level level)
     {
-        ctrl.SetStatus((int)level);
+        ctrl.SetStatusNoVerify((int)level);
         int now = ctrl.GetStatus();
         Console.WriteLine($"Set {level} OK -> principal={ctrl.Principal} ({ctrl.Description}) now={now}");
+        // Optional: persist as preferred so future 'reset' uses this level:
+        PreferredLevelStore.SavePreferredLevel((int)level);
+        return 0;
+    }
+
+    private static int CmdReset(KeyboardBacklightController ctrl)
+    {
+        int preferred = PreferredLevelStore.ReadPreferredLevel();
+        ctrl.ResetStatus(preferred);
+        Console.WriteLine($"Reset applied -> preferred={preferred} principal={ctrl.Principal} ({ctrl.Description})");
+        return 0;
+    }
+
+    private static int CmdWatch(KeyboardBacklightController ctrl)
+    {
+        Console.WriteLine("Watching power/session/screen events. Press Ctrl+C to exit.");
+
+        using var watcher = new PowerEventsWatcher(
+            onTrigger: evt =>
+            {
+                int preferred = PreferredLevelStore.ReadPreferredLevel();
+                try
+                {
+                    ctrl.ResetStatus(preferred);
+                    Console.WriteLine($"[{DateTime.Now:T}] {evt}: applied preferred level {preferred}");
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[{DateTime.Now:T}] {evt}: failed to apply preferred level {preferred}: {ex.Message}");
+                }
+            });
+
+        watcher.Start();
+
+        var exit = new ManualResetEvent(false);
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; exit.Set(); };
+        exit.WaitOne();
         return 0;
     }
 

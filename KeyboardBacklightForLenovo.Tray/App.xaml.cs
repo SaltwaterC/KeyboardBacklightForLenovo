@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Drawing;
-using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
-using Microsoft.Win32;
 using WinForms = System.Windows.Forms;
 
 namespace KeyboardBacklightForLenovo
@@ -22,9 +20,9 @@ namespace KeyboardBacklightForLenovo
         private WinForms.ToolStripMenuItem _lowItem = null!;
         private WinForms.ToolStripMenuItem _highItem = null!;
 
-        // Your core controller
+        // Core pieces
         private KeyboardBacklightController _controller = new();
-
+        
         // Track last seen hardware state to avoid redundant UI work
         private int _lastLevel = -1;
 
@@ -73,14 +71,14 @@ namespace KeyboardBacklightForLenovo
 
             _notifyIcon.ContextMenuStrip = menu;
 
-            // Sync preferred level from registry
-            int preferredLevel = ReadPreferredLevel();
+            // Apply PreferredLevel at startup
+            int preferredLevel = PreferredLevelStore.ReadPreferredLevel();
             _controller.ResetStatus(preferredLevel);
 
             // Initial sync from hardware
             UpdateCheckedItemSafe(immediate: true);
 
-            // Install low-level keyboard hook (for ANY key press → burst poll)
+            // Install low-level keyboard hook (for ANY key press which results in burst poll)
             _hookProc = HookCallback;
             using var proc = System.Diagnostics.Process.GetCurrentProcess();
             using var mod = proc.MainModule!;
@@ -118,10 +116,10 @@ namespace KeyboardBacklightForLenovo
             base.OnExit(e);
         }
 
-        // Menu click → set + persist + update
+        // Menu click to set + persist + update
         private void SetLevel(int level)
         {
-            SavePreferredLevel(level);
+            PreferredLevelStore.SavePreferredLevel(level);
 
             // We set hardware directly, so reflect immediately in UI
             _controller.ResetStatus(level);
@@ -129,25 +127,6 @@ namespace KeyboardBacklightForLenovo
 
             UpdateCheckedItem(level);
             UpdateTrayIcon(level);
-        }
-
-        private static int ReadPreferredLevel()
-        {
-            // Default to 2 (High) if not set
-            return (int)(Registry.GetValue(
-                @"HKEY_CURRENT_USER\Software\KeyboardBacklightForLenovo",
-                "PreferredLevel",
-                2) ?? 2);
-        }
-
-        private static void SavePreferredLevel(int level)
-        {
-            Registry.SetValue(
-                @"HKEY_CURRENT_USER\Software\KeyboardBacklightForLenovo",
-                "PreferredLevel",
-                level,
-                RegistryValueKind.DWord
-            );
         }
 
         // Reads hardware on a background task, then updates UI if changed
@@ -178,7 +157,9 @@ namespace KeyboardBacklightForLenovo
             _offItem.Checked = (level == 0);
             _lowItem.Checked = (level == 1);
             _highItem.Checked = (level == 2);
-            SavePreferredLevel(level);
+
+            // Keep PreferredLevel in sync with observed hardware state
+            PreferredLevelStore.SavePreferredLevel(level);
             UpdateTrayIcon(level);
         }
 
@@ -191,13 +172,11 @@ namespace KeyboardBacklightForLenovo
                 case 0: _notifyIcon.Icon = _iconOff ?? _notifyIcon.Icon; break;
                 case 1: _notifyIcon.Icon = _iconLow ?? _notifyIcon.Icon; break;
                 case 2: _notifyIcon.Icon = _iconHigh ?? _notifyIcon.Icon; break;
-                default: /* leave current icon */ break;
+                default: break;
             }
         }
 
-        // Keyboard hook: we can’t see Fn, but we DO see other keys.
-        // On ANY keydown, run a short "burst" polling window to catch
-        // the Fn+Space change quickly without waiting for the 5s timer.
+        // Keyboard hook to burst polling to catch quick state flips
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
             if (nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN)
@@ -217,7 +196,6 @@ namespace KeyboardBacklightForLenovo
             try
             {
                 var deadline = DateTime.UtcNow + _burstDuration;
-                int last = _lastLevel;
 
                 while (DateTime.UtcNow < deadline)
                 {
@@ -243,7 +221,6 @@ namespace KeyboardBacklightForLenovo
         }
 
         // --- Icon loading (EmbeddedResource or WPF Resource) ---
-
         private static Icon? LoadEmbeddedIcon(string resourceName)
         {
             using var s = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
@@ -262,16 +239,6 @@ namespace KeyboardBacklightForLenovo
 
         // P/Invoke
         private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct KBDLLHOOKSTRUCT
-        {
-            public int vkCode;
-            public int scanCode;
-            public int flags;
-            public int time;
-            public IntPtr dwExtraInfo;
-        }
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
