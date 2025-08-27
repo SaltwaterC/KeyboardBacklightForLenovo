@@ -31,3 +31,4 @@ Tested on the following laptops:
 ## Special thanks
 
 [@gonwan](https://github.com/gonwan) for figuring out EnergyDrv.
+[@Maclay74](https://github.com/Maclay74) for figuring out NightLight.

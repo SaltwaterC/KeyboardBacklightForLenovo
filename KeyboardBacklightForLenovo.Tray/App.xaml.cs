@@ -63,6 +63,9 @@ namespace KeyboardBacklightForLenovo
         private readonly TimeSpan _burstDuration = TimeSpan.FromMilliseconds(900);
         private readonly TimeSpan _burstInterval = TimeSpan.FromMilliseconds(120);
 
+        // Night light
+        private readonly NightLight _nightLight = new NightLight();
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -153,7 +156,7 @@ namespace KeyboardBacklightForLenovo
 
         private void OpenSettingsWindow()
         {
-            var wnd = new SettingsWindow(nightLightAvailable: false); // TODO: wire up night light detection
+            var wnd = new SettingsWindow(nightLightAvailable: _nightLight.Supported);
             wnd.ShowDialog();
         }
 
