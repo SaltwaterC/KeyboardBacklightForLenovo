@@ -79,16 +79,33 @@ namespace KeyboardBacklightForLenovo
                 Text = "Keyboard Backlight Controller for Lenovo"
             };
 
+            // --- Build tray menu ---
             var menu = new WinForms.ContextMenuStrip();
+
+            // Level items (selectable)
             _offItem = new WinForms.ToolStripMenuItem("Keyboard Backlight Off", null, (_, __) => SetLevelUserIntent(0));
             _lowItem = new WinForms.ToolStripMenuItem("Keyboard Backlight Low", null, (_, __) => SetLevelUserIntent(1));
             _highItem = new WinForms.ToolStripMenuItem("Keyboard Backlight High", null, (_, __) => SetLevelUserIntent(2));
+
+            // Info items (non-selectable)
+            var acpiPrincipal = _controller.Principal.StartsWith(@"\\.\")
+                ? _controller.Principal.Substring(4)
+                : _controller.Principal;
+            var description = _controller.Description;
+
+            var infoDriverItem = new WinForms.ToolStripMenuItem($"Driver: {acpiPrincipal}") { Enabled = false };
+            var infoPlatformItem = new WinForms.ToolStripMenuItem($"Supports: {description}") { Enabled = false };
+
             menu.Items.AddRange(new WinForms.ToolStripItem[]
             {
                 _offItem, _lowItem, _highItem,
                 new WinForms.ToolStripSeparator(),
+                infoDriverItem,
+                infoPlatformItem,
+                new WinForms.ToolStripSeparator(),
                 new WinForms.ToolStripMenuItem("Exit", null, (_, __) => ExitApp())
             });
+
             _notifyIcon.ContextMenuStrip = menu;
 
             // Load preferred once; keep cached in memory
