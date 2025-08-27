@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeyboardBacklightForLenovo.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeyboardBacklightForLenovo.Cli", "KeyboardBacklightForLenovo.Cli\KeyboardBacklightForLenovo.Cli.csproj", "{AD34451F-B391-4DFA-8376-3755DE175FDE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeyboardBacklightForLenovo.Service", "KeyboardBacklightForLenovo.Service\KeyboardBacklightForLenovo.Service.csproj", "{4770A28C-9C91-47C5-89AE-0B5F352B8D49}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -41,6 +43,14 @@ Global
 		{AD34451F-B391-4DFA-8376-3755DE175FDE}.Release|x64.Build.0 = Release|x64
 		{AD34451F-B391-4DFA-8376-3755DE175FDE}.Release|x86.ActiveCfg = Release|x86
 		{AD34451F-B391-4DFA-8376-3755DE175FDE}.Release|x86.Build.0 = Release|x86
+		{4770A28C-9C91-47C5-89AE-0B5F352B8D49}.Debug|x64.ActiveCfg = Debug|x64
+		{4770A28C-9C91-47C5-89AE-0B5F352B8D49}.Debug|x64.Build.0 = Debug|x64
+		{4770A28C-9C91-47C5-89AE-0B5F352B8D49}.Debug|x86.ActiveCfg = Debug|x86
+		{4770A28C-9C91-47C5-89AE-0B5F352B8D49}.Debug|x86.Build.0 = Debug|x86
+		{4770A28C-9C91-47C5-89AE-0B5F352B8D49}.Release|x64.ActiveCfg = Release|x64
+		{4770A28C-9C91-47C5-89AE-0B5F352B8D49}.Release|x64.Build.0 = Release|x64
+		{4770A28C-9C91-47C5-89AE-0B5F352B8D49}.Release|x86.ActiveCfg = Release|x86
+		{4770A28C-9C91-47C5-89AE-0B5F352B8D49}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

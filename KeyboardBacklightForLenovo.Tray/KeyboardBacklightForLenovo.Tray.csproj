@@ -9,7 +9,7 @@
     <RootNamespace>KeyboardBacklightForLenovo</RootNamespace>
     <AssemblyName>KeyboardBacklightForLenovo.Tray</AssemblyName>
     <Platforms>x64;x86</Platforms>
-	<AssemblyName>Tray</AssemblyName>
+	<AssemblyName>BacklightTrayApp</AssemblyName>
   </PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
