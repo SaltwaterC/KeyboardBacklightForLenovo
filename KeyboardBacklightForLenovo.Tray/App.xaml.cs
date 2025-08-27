@@ -87,6 +87,8 @@ namespace KeyboardBacklightForLenovo
             _lowItem = new WinForms.ToolStripMenuItem("Keyboard Backlight Low", null, (_, __) => SetLevelUserIntent(1));
             _highItem = new WinForms.ToolStripMenuItem("Keyboard Backlight High", null, (_, __) => SetLevelUserIntent(2));
 
+            var settingsItem = new WinForms.ToolStripMenuItem("Settings", null, (_, __) => OpenSettingsWindow());
+            
             // Info items (non-selectable)
             var acpiPrincipal = _controller.Principal.StartsWith(@"\\.\")
                 ? _controller.Principal.Substring(4)
@@ -99,6 +101,8 @@ namespace KeyboardBacklightForLenovo
             menu.Items.AddRange(new WinForms.ToolStripItem[]
             {
                 _offItem, _lowItem, _highItem,
+                new WinForms.ToolStripSeparator(),
+                settingsItem,
                 new WinForms.ToolStripSeparator(),
                 infoDriverItem,
                 infoPlatformItem,
@@ -145,6 +149,12 @@ namespace KeyboardBacklightForLenovo
 
             // Hide template window if present
             Current.MainWindow?.Hide();
+        }
+
+        private void OpenSettingsWindow()
+        {
+            var wnd = new SettingsWindow(nightLightAvailable: false); // TODO: wire up night light detection
+            wnd.ShowDialog();
         }
 
         protected override void OnExit(ExitEventArgs e)
@@ -212,7 +222,7 @@ namespace KeyboardBacklightForLenovo
                     foreach (var d in delaysMs)
                     {
                         await Task.Delay(d, cts.Token);
-                        TryRestorePreferred_NoPersist();
+                        TryRestorePreferredNoPersist();
                     }
                 }
                 catch (TaskCanceledException) { /* ok */ }
@@ -228,7 +238,7 @@ namespace KeyboardBacklightForLenovo
             });
         }
 
-        private void TryRestorePreferred_NoPersist()
+        private void TryRestorePreferredNoPersist()
         {
             try
             {
@@ -370,7 +380,7 @@ namespace KeyboardBacklightForLenovo
             if (_postResumeGuard)
             {
                 _postResumeGuard = false;
-                Debug.WriteLine("[Tray] User input → post-resume guard cleared");
+                Debug.WriteLine("[Tray] User input -> post-resume guard cleared");
             }
         }
 

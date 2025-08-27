@@ -1,0 +1,85 @@
+﻿<Window x:Class="KeyboardBacklightForLenovo.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+        Title="Keyboard Backlight Settings"
+        Width="500"
+        SizeToContent="WidthAndHeight"
+        MinWidth="500"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>
+            <!-- buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Day -->
+        <GroupBox Header="Day Mode" Grid.Row="0">
+            <StackPanel>
+                <RadioButton x:Name="rbDayOff"  Content="Off"/>
+                <RadioButton x:Name="rbDayLow"  Content="Low"/>
+                <RadioButton x:Name="rbDayHigh" Content="High"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Night -->
+        <GroupBox Header="Night Mode" Grid.Row="2">
+            <StackPanel>
+                <RadioButton x:Name="rbNightOff"  Content="Off"/>
+                <RadioButton x:Name="rbNightLow"  Content="Low"/>
+                <RadioButton x:Name="rbNightHigh" Content="High"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Mode -->
+        <GroupBox Header="Operating Mode" Grid.Row="4">
+            <StackPanel Orientation="Horizontal" Margin="4,4,4,0">
+                <RadioButton x:Name="rbModeTime" Content="Time based" Margin="0,0,16,0"
+                             Checked="ModeChanged"/>
+                <RadioButton x:Name="rbModeNightLight" Content="Night light"
+                             Checked="ModeChanged"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Time-based config -->
+        <GroupBox Header="Time based – Day interval (Night = complement)" Grid.Row="6"
+                  x:Name="grpTime">
+            <Grid Margin="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="Start" VerticalAlignment="Center"/>
+                <wfi:WindowsFormsHost Grid.Column="1" x:Name="hostStart" Margin="4,0,0,0"/>
+
+                <TextBlock Grid.Column="3" Text="End" VerticalAlignment="Center"/>
+                <wfi:WindowsFormsHost Grid.Column="4" x:Name="hostEnd" Margin="4,0,0,0"/>
+
+                <TextBlock Grid.Column="6" x:Name="lblNightSpan" VerticalAlignment="Center"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="OK" Width="90" Margin="0,0,8,0" Click="OnOkClick"/>
+            <Button Content="Cancel" Width="90" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>
