@@ -62,22 +62,26 @@ namespace KeyboardBacklightForLenovo
             }
             grpTime.IsEnabled = rbModeTime.IsChecked == true;
 
-            // Times (base today, keep only time-of-day)
+            // Times (base today; keep only time-of-day)
             var today = DateTime.Today;
             _dtStart.Value = today.Add(_model.DayStart);
             _dtEnd.Value = today.Add(_model.DayEnd);
 
-            // Show/hide time panel depending on mode
-            grpTime.Visibility = (rbModeTime.IsChecked == true)
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            // Show/hide + enable/disable time section based on mode
+            bool timeBased = !(_nightLightAvailable && _model.Mode == OperatingMode.NightLight);
+            grpTime.Visibility = timeBased ? Visibility.Visible : Visibility.Collapsed;
+            grpTime.IsEnabled = timeBased;
+            _dtStart.Enabled = timeBased;
+            _dtEnd.Enabled = timeBased;
         }
 
         private void ModeChanged(object sender, RoutedEventArgs e)
         {
-            // Hide the time controls entirely when Night light is selected.
             bool timeBased = rbModeTime.IsChecked == true;
             grpTime.Visibility = timeBased ? Visibility.Visible : Visibility.Collapsed;
+            grpTime.IsEnabled = timeBased;
+            _dtStart.Enabled = timeBased;
+            _dtEnd.Enabled = timeBased;
         }
 
         private void UpdateNightSpan()
