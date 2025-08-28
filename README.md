@@ -30,5 +30,5 @@ Tested on the following laptops:
 
 ## Special thanks
 
-[@gonwan](https://github.com/gonwan) for figuring out EnergyDrv.\
-[@Maclay74](https://github.com/Maclay74) for figuring out NightLight.
+[@gonwan](https://github.com/gonwan) for [figuring out EnergyDrv](https://www.gonwan.com/2025/04/11/keyboard-backlight-control-on-lenovo-ideapad-xiaoxin-models/).\
+[@Maclay74](https://github.com/Maclay74) for [figuring out NightLight](https://github.com/Maclay74/tiny-screen/blob/main/TinyScreen/Src/Services/NightLight.cs).
