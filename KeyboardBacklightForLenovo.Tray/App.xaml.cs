@@ -73,6 +73,8 @@ namespace KeyboardBacklightForLenovo
         private bool AutoEnabled => _settings.AutoEnabled; // convenience
         private static string ModeLabel(OperatingMode mode)
             => mode == OperatingMode.TimeBased ? "Time based" : "Night light";
+        // Coalesced auto re-evals (startup/resume) for Night light
+        private CancellationTokenSource? _autoKickCts;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -131,21 +133,30 @@ namespace KeyboardBacklightForLenovo
             _notifyIcon.ContextMenuStrip = menu;
 
             // Auto-at-start behavior:
-            // If Auto is ON, compute desired by day/night and seed the preferred cache + persist before we touch hardware.
             if (AutoEnabled)
             {
-                int desired = ComputeDesiredLevelByDayNight();
-                if (desired != PreferredLevelStore.ReadPreferredLevel())
+                if (_settings.Mode == OperatingMode.NightLight && _nightLight.Supported)
                 {
-                    PreferredLevelStore.SavePreferredLevel(desired);
+                    // Do NOT seed PreferredLevel on startup — Night light state may not be ready yet.
+                    _preferredCached = PreferredLevelStore.ReadPreferredLevel();
+
+                    // Give Night light a moment to come up, then re-evaluate aggressively.
+                    KickAutoSoon("startup-nightlight", 300, 1500, 6000, 15000);
                 }
-                _preferredCached = desired;
+                else
+                {
+                    // Time-based: safe to seed immediately.
+                    int desired = ComputeDesiredLevelByDayNight();
+                    if (desired != PreferredLevelStore.ReadPreferredLevel())
+                        PreferredLevelStore.SavePreferredLevel(desired);
+                    _preferredCached = desired;
+                }
             }
             else
             {
-                // Load preferred once; keep cached in memory
                 _preferredCached = PreferredLevelStore.ReadPreferredLevel();
             }
+
 
             // Apply preferred to hardware (ResetStatus avoids unnecessary sets)
             _controller.ResetStatus(_preferredCached);
@@ -237,6 +248,10 @@ namespace KeyboardBacklightForLenovo
 
             if (_notifyIcon is not null) { _notifyIcon.Visible = false; _notifyIcon.Dispose(); }
 
+            _autoKickCts?.Cancel();
+            _autoKickCts?.Dispose();
+            _autoKickCts = null;
+
             base.OnExit(e);
         }
 
@@ -267,6 +282,34 @@ namespace KeyboardBacklightForLenovo
             }
         }
 
+        private void KickAutoSoon(string reason, params int[] delaysMs)
+        {
+            if (!AutoEnabled) return;
+
+            var old = Interlocked.Exchange(ref _autoKickCts, new CancellationTokenSource());
+            try { old?.Cancel(); } catch { }
+            old?.Dispose();
+
+            var cts = _autoKickCts!;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    foreach (var d in delaysMs)
+                    {
+                        await Task.Delay(d, cts.Token);
+                        EvaluateAuto(applyHardware: true, reason: $"{reason}+{d}ms");
+                    }
+                }
+                catch (TaskCanceledException) { /* fine */ }
+                finally
+                {
+                    cts.Dispose();
+                    Interlocked.CompareExchange(ref _autoKickCts, null, cts);
+                }
+            });
+        }
+
         // ===== Power event callback =====
         private void OnPowerEvent(PowerEventType evt)
         {
@@ -288,16 +331,29 @@ namespace KeyboardBacklightForLenovo
                         _lastResumeSignalUtc = DateTime.UtcNow;
                         _quiesceUntilUtc = _lastResumeSignalUtc + WakeQuiesce;
 
-                        // If Auto is on: recompute desired and seed preferred BEFORE the restore chain runs
+                        // Auto-at-start behavior:
                         if (AutoEnabled)
                         {
-                            int desired = ComputeDesiredLevelByDayNight();
-                            if (desired != _preferredCached)
+                            if (_settings.Mode == OperatingMode.NightLight && _nightLight.Supported)
                             {
-                                PreferredLevelStore.SavePreferredLevel(desired);
-                                _preferredCached = desired;
-                                Debug.WriteLine($"[Auto] Post-resume seed preferred={desired}");
+                                // Do NOT seed PreferredLevel on startup — Night light state may not be ready yet.
+                                _preferredCached = PreferredLevelStore.ReadPreferredLevel();
+
+                                // Give Night light a moment to come up, then re-evaluate aggressively.
+                                KickAutoSoon("startup-nightlight", 300, 1500, 6000, 15000);
                             }
+                            else
+                            {
+                                // Time-based: safe to seed immediately.
+                                int desired = ComputeDesiredLevelByDayNight();
+                                if (desired != PreferredLevelStore.ReadPreferredLevel())
+                                    PreferredLevelStore.SavePreferredLevel(desired);
+                                _preferredCached = desired;
+                            }
+                        }
+                        else
+                        {
+                            _preferredCached = PreferredLevelStore.ReadPreferredLevel();
                         }
 
                         // Coalesce multiple resume-ish events to one sequence of restores
