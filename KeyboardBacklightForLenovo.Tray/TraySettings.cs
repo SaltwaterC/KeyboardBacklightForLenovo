@@ -14,8 +14,9 @@ namespace KeyboardBacklightForLenovo
     /// <summary>
     /// Settings used by the tray app (and optionally by the service later).
     /// - Day/Night levels: 0=Off, 1=Low, 2=High
-    /// - Mode: TimeBased or NightLight (stubbed – detection/wiring elsewhere)
+    /// - Mode: TimeBased or NightLight
     /// - Time-based: DayStart -> DayEnd; Night is the 24h complement [DayEnd -> DayStart]
+    /// - AutoEnabled: when true, persistence is driven ONLY by day/night transitions.
     /// </summary>
     public sealed class TraySettings
     {
@@ -27,7 +28,9 @@ namespace KeyboardBacklightForLenovo
         public TimeSpan DayStart { get; set; } = TimeSpan.FromHours(8);   // 08:00
 
         [JsonConverter(typeof(TimeSpanJsonConverter))]
-        public TimeSpan DayEnd { get; set; } = TimeSpan.FromHours(20);  // 20:00
+        public TimeSpan DayEnd { get; set; } = TimeSpan.FromHours(20);    // 20:00
+
+        public bool AutoEnabled { get; set; } = false;
 
         public (TimeSpan NightStart, TimeSpan NightEnd) GetNightInterval()
             => (DayEnd, DayStart);

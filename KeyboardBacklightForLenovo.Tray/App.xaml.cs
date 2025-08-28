@@ -20,6 +20,7 @@ namespace KeyboardBacklightForLenovo
         private WinForms.ToolStripMenuItem _offItem = null!;
         private WinForms.ToolStripMenuItem _lowItem = null!;
         private WinForms.ToolStripMenuItem _highItem = null!;
+        private WinForms.ToolStripMenuItem _autoItem = null!;
 
         // Core pieces
         private readonly KeyboardBacklightController _controller = new();
@@ -63,8 +64,15 @@ namespace KeyboardBacklightForLenovo
         private readonly TimeSpan _burstDuration = TimeSpan.FromMilliseconds(900);
         private readonly TimeSpan _burstInterval = TimeSpan.FromMilliseconds(120);
 
-        // Night light
+        // Night light + settings
         private readonly NightLight _nightLight = new NightLight();
+        private TraySettings _settings = TraySettingsStore.LoadOrDefaults();
+
+        // Auto engine
+        private DispatcherTimer? _autoTimer;        // periodic evaluator
+        private bool AutoEnabled => _settings.AutoEnabled; // convenience
+        private static string ModeLabel(OperatingMode mode)
+            => mode == OperatingMode.TimeBased ? "Time based" : "Night light";
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -90,8 +98,14 @@ namespace KeyboardBacklightForLenovo
             _lowItem = new WinForms.ToolStripMenuItem("Keyboard Backlight Low", null, (_, __) => SetLevelUserIntent(1));
             _highItem = new WinForms.ToolStripMenuItem("Keyboard Backlight High", null, (_, __) => SetLevelUserIntent(2));
 
+            // Auto toggle item (does not change which of Off/Low/High is selected)
+            // Replace your current _autoItem creation with:
+            _autoItem = new WinForms.ToolStripMenuItem($"Auto ({ModeLabel(_settings.Mode)})", null, (_, __) => ToggleAuto());
+            _autoItem.CheckOnClick = false;
+            _autoItem.Checked = _settings.AutoEnabled;
+
             var settingsItem = new WinForms.ToolStripMenuItem("Settings", null, (_, __) => OpenSettingsWindow());
-            
+
             // Info items (non-selectable)
             var acpiPrincipal = _controller.Principal.StartsWith(@"\\.\")
                 ? _controller.Principal.Substring(4)
@@ -105,18 +119,35 @@ namespace KeyboardBacklightForLenovo
             {
                 _offItem, _lowItem, _highItem,
                 new WinForms.ToolStripSeparator(),
+                _autoItem,
+                new WinForms.ToolStripSeparator(),
                 settingsItem,
                 new WinForms.ToolStripSeparator(),
-                infoDriverItem,
-                infoPlatformItem,
+                infoDriverItem, infoPlatformItem,
                 new WinForms.ToolStripSeparator(),
                 new WinForms.ToolStripMenuItem("Exit", null, (_, __) => ExitApp())
             });
 
             _notifyIcon.ContextMenuStrip = menu;
 
-            // Load preferred once; keep cached in memory
-            _preferredCached = PreferredLevelStore.ReadPreferredLevel();
+            // Auto-at-start behavior:
+            // If Auto is ON, compute desired by day/night and seed the preferred cache + persist before we touch hardware.
+            if (AutoEnabled)
+            {
+                int desired = ComputeDesiredLevelByDayNight();
+                if (desired != PreferredLevelStore.ReadPreferredLevel())
+                {
+                    PreferredLevelStore.SavePreferredLevel(desired);
+                }
+                _preferredCached = desired;
+            }
+            else
+            {
+                // Load preferred once; keep cached in memory
+                _preferredCached = PreferredLevelStore.ReadPreferredLevel();
+            }
+
+            // Apply preferred to hardware (ResetStatus avoids unnecessary sets)
             _controller.ResetStatus(_preferredCached);
 
             // Initial sync from hardware (DO NOT persist)
@@ -150,15 +181,41 @@ namespace KeyboardBacklightForLenovo
             _slowTimer.Tick += (_, __) => UpdateCheckedItemSafe(immediate: false);
             _slowTimer.Start();
 
+            // Auto evaluation timer. Keep this light; day/night flips are infrequent.
+            _autoTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
+            _autoTimer.Tick += (_, __) => EvaluateAuto(applyHardware: true, reason: "timer");
+            _autoTimer.Start();
+
+            // Run one immediate evaluation in case the machine crossed day/night while powered off.
+            EvaluateAuto(applyHardware: true, reason: "startup");
+
+            // Night light registry watcher
+            _nightLight.Changed += OnNightLightChanged;
+            _nightLight.StartWatching();
+
             // Hide template window if present
             Current.MainWindow?.Hide();
+        }
+
+        private void UpdateAutoMenuText()
+        {
+            if (_autoItem == null) return;
+            _autoItem.Text = $"Auto ({ModeLabel(_settings.Mode)})";
         }
 
         private void OpenSettingsWindow()
         {
             var wnd = new SettingsWindow(nightLightAvailable: _nightLight.Supported);
             wnd.ShowDialog();
+
+            _settings = TraySettingsStore.LoadOrDefaults();
+
+            _autoItem.Checked = _settings.AutoEnabled;
+            UpdateAutoMenuText();             // <— ensure the “(Time based|Night light)” label updates
+
+            EvaluateAuto(applyHardware: true, reason: "settings-changed");
         }
+
 
         protected override void OnExit(ExitEventArgs e)
         {
@@ -169,14 +226,45 @@ namespace KeyboardBacklightForLenovo
             if (_mouseHookId != IntPtr.Zero) UnhookWindowsHookEx(_mouseHookId);
 
             if (_slowTimer is not null) { _slowTimer.Stop(); _slowTimer = null; }
+            if (_autoTimer is not null) { _autoTimer.Stop(); _autoTimer = null; }
 
             _restoreCts?.Cancel(); _restoreCts?.Dispose(); _restoreCts = null;
 
             _iconOff?.Dispose(); _iconLow?.Dispose(); _iconHigh?.Dispose();
 
+            try { _nightLight.StopWatching(); } catch { /* ignore */ }
+            _nightLight.Changed -= OnNightLightChanged;
+
             if (_notifyIcon is not null) { _notifyIcon.Visible = false; _notifyIcon.Dispose(); }
 
             base.OnExit(e);
+        }
+
+        // ===== Auto toggle =====
+        private void ToggleAuto()
+        {
+            _settings = TraySettingsStore.LoadOrDefaults(); // refresh latest
+            _settings.AutoEnabled = !_settings.AutoEnabled;
+            TraySettingsStore.Save(_settings);
+
+            _autoItem.Checked = _settings.AutoEnabled;
+
+            if (_settings.AutoEnabled)
+            {
+                // Immediately evaluate and apply
+                EvaluateAuto(applyHardware: true, reason: "manual-toggle-on");
+            }
+            // When toggling OFF, we just stop suppressing learn; nothing else to do.
+        }
+
+        private void OnNightLightChanged(object? sender, EventArgs e)
+        {
+            // Only care when Auto is enabled AND Night light mode is chosen.
+            if (_settings.AutoEnabled && _settings.Mode == OperatingMode.NightLight)
+            {
+                // Re-evaluate immediately and apply to hardware so the keyboard switches with the screen tint
+                EvaluateAuto(applyHardware: true, reason: "nightlight-registry-change");
+            }
         }
 
         // ===== Power event callback =====
@@ -199,6 +287,18 @@ namespace KeyboardBacklightForLenovo
                         _postResumeGuard = true;
                         _lastResumeSignalUtc = DateTime.UtcNow;
                         _quiesceUntilUtc = _lastResumeSignalUtc + WakeQuiesce;
+
+                        // If Auto is on: recompute desired and seed preferred BEFORE the restore chain runs
+                        if (AutoEnabled)
+                        {
+                            int desired = ComputeDesiredLevelByDayNight();
+                            if (desired != _preferredCached)
+                            {
+                                PreferredLevelStore.SavePreferredLevel(desired);
+                                _preferredCached = desired;
+                                Debug.WriteLine($"[Auto] Post-resume seed preferred={desired}");
+                            }
+                        }
 
                         // Coalesce multiple resume-ish events to one sequence of restores
                         ScheduleRestorePreferredChain(RestoreChainDelaysMs);
@@ -260,11 +360,82 @@ namespace KeyboardBacklightForLenovo
             }
         }
 
+        // ===== Auto engine =====
+        private void EvaluateAuto(bool applyHardware, string reason)
+        {
+            if (!AutoEnabled) return;
+
+            int desired = ComputeDesiredLevelByDayNight();
+            if (desired != _preferredCached)
+            {
+                PreferredLevelStore.SavePreferredLevel(desired);
+                _preferredCached = desired;
+                Debug.WriteLine($"[Auto] Persisted preferred={desired} ({reason})");
+
+                if (applyHardware)
+                {
+                    try
+                    {
+                        _controller.ResetStatus(desired);
+                        _lastLevel = desired;
+                        Dispatcher.Invoke(() => UpdateCheckedItemUIOnly(desired));
+                        Debug.WriteLine($"[Auto] Applied hardware level={desired} ({reason})");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("[Auto] Apply failed: " + ex.Message);
+                    }
+                }
+            }
+        }
+
+        private int ComputeDesiredLevelByDayNight()
+        {
+            // Reload settings lightly in case the JSON changed externally
+            var s = _settings;
+
+            bool timeBased = s.Mode == OperatingMode.TimeBased || !_nightLight.Supported;
+            bool isNight;
+
+            if (timeBased)
+            {
+                var now = DateTime.Now.TimeOfDay;
+                var dayStart = s.DayStart;
+                var dayEnd = s.DayEnd;
+
+                // Day: [dayStart, dayEnd) possibly crossing midnight
+                // Night: complement
+                if (dayStart <= dayEnd)
+                {
+                    // Simple case: same day
+                    bool isDay = now >= dayStart && now < dayEnd;
+                    isNight = !isDay;
+                }
+                else
+                {
+                    // Wrap-around (e.g. 20:00 → 08:00)
+                    bool isDay = now >= dayStart || now < dayEnd;
+                    isNight = !isDay;
+                }
+            }
+            else
+            {
+                // Night light mode: night when NL is enabled
+                isNight = _nightLight.Enabled;
+            }
+
+            return isNight ? s.NightLevel : s.DayLevel;
+        }
+
         // ===== Explicit user intent (tray menu) =====
         private void SetLevelUserIntent(int level)
         {
-            PreferredLevelStore.SavePreferredLevel(level); // persist now
-            _preferredCached = level;
+            // In Auto mode we DO NOT persist; just apply to hardware and let auto own the preference on day/night
+            if (!AutoEnabled)
+            {
+                PreferredLevelStore.SavePreferredLevel(level); // persist now
+                _preferredCached = level;
+            }
 
             _controller.ResetStatus(level);
             _lastLevel = level;
@@ -289,7 +460,8 @@ namespace KeyboardBacklightForLenovo
                         {
                             UpdateCheckedItemUIOnly(level);
 
-                            if (CanPersistLearned(level))
+                            // Suppress *all* learning when Auto is ON
+                            if (!AutoEnabled && CanPersistLearned(level))
                             {
                                 PreferredLevelStore.SavePreferredLevel(level);
                                 _preferredCached = level;
@@ -297,7 +469,7 @@ namespace KeyboardBacklightForLenovo
                             }
                             else
                             {
-                                Debug.WriteLine($"[Tray] Suppressed learning (lvl={level}, guard={_postResumeGuard}, quiesce={(DateTime.UtcNow < _quiesceUntilUtc)})");
+                                Debug.WriteLine($"[Tray] Suppressed learning (lvl={level}, auto={AutoEnabled}, guard={_postResumeGuard}, quiesce={(DateTime.UtcNow < _quiesceUntilUtc)})");
                             }
                         });
                     }
@@ -334,6 +506,7 @@ namespace KeyboardBacklightForLenovo
             _offItem.Checked = (level == 0);
             _lowItem.Checked = (level == 1);
             _highItem.Checked = (level == 2);
+            _autoItem.Checked = AutoEnabled; // keep auto tick visible regardless of level
             UpdateTrayIcon(level);
         }
 
@@ -408,7 +581,8 @@ namespace KeyboardBacklightForLenovo
                             {
                                 UpdateCheckedItemUIOnly(current);
 
-                                if (CanPersistLearned(current))
+                                // Suppress learning in Auto mode
+                                if (!AutoEnabled && CanPersistLearned(current))
                                 {
                                     PreferredLevelStore.SavePreferredLevel(current);
                                     _preferredCached = current;
@@ -416,7 +590,7 @@ namespace KeyboardBacklightForLenovo
                                 }
                                 else
                                 {
-                                    Debug.WriteLine($"[Tray] Suppressed learning (burst, lvl={current})");
+                                    Debug.WriteLine($"[Tray] Suppressed learning (burst, lvl={current}, auto={AutoEnabled})");
                                 }
                             });
                             break; // early exit

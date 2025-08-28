@@ -8,9 +8,7 @@ Basically:
 - A CLI application that may be used to test the functionality or use with other automation tools, such as Task Scheduler.
 - A Windows service for responding to events (boot, screen on) to reset the keyboard backlight status to a value set by the tray or the CLI application.
 
-## TODO
-
-- Auto mode for tray application. Have a set mode for day and a set mode for night. Either use a set time for day/night or mirror Night Light behaviour.
+The tray application has an Auto mode: a set mode for day and a set mode for night. This is either time based (on set time intervals) or Night light based where it follows Night light state.
 
 ## Under the bonnet
 

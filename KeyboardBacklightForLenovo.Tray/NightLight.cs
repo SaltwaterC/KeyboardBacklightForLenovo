@@ -23,6 +23,11 @@ SOFTWARE.
  */
 
 using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
+using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
+using System.Threading;
 
 namespace KeyboardBacklightForLenovo
 {
@@ -48,9 +53,110 @@ namespace KeyboardBacklightForLenovo
             }
         }
 
+        private Thread? _watchThread;
+        private CancellationTokenSource? _watchCts;
+        public event EventHandler? Changed;   // raised on any NL state blob change
+
+        // P/Invoke
+        private const int KEY_NOTIFY = 0x0010;
+        private const int REG_NOTIFY_CHANGE_NAME = 0x1;
+        private const int REG_NOTIFY_CHANGE_LAST_SET = 0x4;
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int RegNotifyChangeKeyValue(
+            SafeRegistryHandle hKey,
+            bool bWatchSubtree,
+            int dwNotifyFilter,
+            IntPtr hEvent,
+            bool fAsynchronous);
+
+
         public NightLight()
         {
             _registryKey = Registry.CurrentUser.OpenSubKey(_key, false);
+        }
+
+        public void StartWatching()
+        {
+            // Only relevant if the feature works and the key is present.
+            if (!Supported) return;
+
+            StopWatching(); // idempotent
+
+            try
+            {
+                // Re-open with KEY_NOTIFY so RegNotifyChangeKeyValue can be used.
+                // .NET 8+: OpenSubKey with rights.
+                var rk = Registry.CurrentUser.OpenSubKey(
+                    _key,
+                    RegistryKeyPermissionCheck.ReadSubTree,
+                    RegistryRights.ReadKey | RegistryRights.Notify);
+
+                if (rk == null)
+                    return;
+
+                _watchCts = new CancellationTokenSource();
+                var token = _watchCts.Token;
+
+                _watchThread = new Thread(() =>
+                {
+                    using (rk)
+                    {
+                        var h = rk.Handle;
+
+                        while (!token.IsCancellationRequested)
+                        {
+                            // Block until something changes under this key (value or name)
+                            int hr = RegNotifyChangeKeyValue(
+                                h,
+                                bWatchSubtree: false,
+                                dwNotifyFilter: REG_NOTIFY_CHANGE_LAST_SET | REG_NOTIFY_CHANGE_NAME,
+                                hEvent: IntPtr.Zero,
+                                fAsynchronous: false);
+
+                            // If cancelled or error, break politely
+                            if (token.IsCancellationRequested || hr != 0)
+                                break;
+
+                            try
+                            {
+                                // Debounce tiny bursts (multiple writes per UI toggle)
+                                Thread.Sleep(50);
+                                Changed?.Invoke(this, EventArgs.Empty);
+                            }
+                            catch { /* swallow handler exceptions */ }
+                        }
+                    }
+                })
+                {
+                    IsBackground = true,
+                    Name = "NightLightRegistryWatcher"
+                };
+
+                _watchThread.Start();
+            }
+            catch
+            {
+                // If anything fails, we just fall back to your periodic checks.
+                StopWatching();
+            }
+        }
+
+        public void StopWatching()
+        {
+            try { _watchCts?.Cancel(); } catch { }
+            try
+            {
+                if (_watchThread != null && _watchThread.IsAlive)
+                    _watchThread.Join(200);
+            }
+            catch { }
+            finally
+            {
+                _watchCts?.Dispose();
+                _watchCts = null;
+                _watchThread = null;
+            }
         }
 
         ~NightLight()
