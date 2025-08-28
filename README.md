@@ -10,6 +10,8 @@ Basically:
 
 The tray application has an Auto mode: a set mode for day and a set mode for night. This is either time based (on set time intervals) or Night light based where it follows Night light state.
 
+The auto mode suspends persistence: the keyboard backlight is set to the day or night level on transition, and user changes are ignored until the next transition. Manual override is still possible, but the backlight status shall be reset to the value set for day or night mode upon encountering a power event.
+
 ## Under the bonnet
 
 This uses ACPI (Advanced Configuration and Power Interface) principals exposed by Lenovo's drivers to get and set backlight level:
