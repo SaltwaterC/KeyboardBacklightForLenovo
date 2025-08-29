@@ -1,37 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Variables.props" />
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-	<OutputType>Library</OutputType>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <RootNamespace>KeyboardBacklightForLenovo</RootNamespace>
+    <OutputType>Library</OutputType>
+    <IsPublishable>false</IsPublishable>
+    <UseAppHost>false</UseAppHost>
     <AssemblyName>KeyboardBacklightForLenovo.Core</AssemblyName>
-    <Platforms>x64;x86</Platforms>
-	<IsPublishable>false</IsPublishable>
-	<UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<OutputPath>..\bin\x64\Release\</OutputPath>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<OutputPath>..\bin\x64\Debug\</OutputPath>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
-		<OutputPath>..\bin\x86\Release\</OutputPath>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-		<OutputPath>..\bin\x86\Debug\</OutputPath>
-	</PropertyGroup>
+  <ItemGroup>
+    <Content Include="DriversConfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
-	<ItemGroup>
-		<Content Include="DriversConfig.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Microsoft.Win32.SystemEvents" Version="8.0.0" />
-		<PackageReference Include="System.Diagnostics.EventLog" Version="8.0.0" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Win32.SystemEvents" Version="8.0.0" />
+    <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.0" />
+  </ItemGroup>
 </Project>
