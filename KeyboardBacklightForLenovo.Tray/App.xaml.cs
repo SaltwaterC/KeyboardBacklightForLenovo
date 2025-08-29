@@ -494,7 +494,9 @@ namespace KeyboardBacklightForLenovo
             else
             {
                 // Night light mode: night when NL is enabled
-                isNight = _nightLight.Enabled;
+                bool en = _nightLight.Enabled;
+                isNight = en;
+                try { System.Diagnostics.Debug.WriteLine($"[Auto] NightLight.Enabled={en}"); } catch { }
             }
 
             return isNight ? s.NightLevel : s.DayLevel;
