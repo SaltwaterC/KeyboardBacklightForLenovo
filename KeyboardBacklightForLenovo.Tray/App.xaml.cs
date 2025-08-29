@@ -76,8 +76,21 @@ namespace KeyboardBacklightForLenovo
         // Coalesced auto re-evals (startup/resume) for Night light
         private CancellationTokenSource? _autoKickCts;
 
+        private static Mutex? _singleInstanceMutex;
+        private const string SingleInstanceName = "BacklightTrayApp";
+
         protected override void OnStartup(StartupEventArgs e)
         {
+            // ---- single instance guard ----
+            bool createdNew;
+            _singleInstanceMutex = new Mutex(initiallyOwned: true, name: SingleInstanceName, createdNew: out createdNew);
+            if (!createdNew)
+            {
+                // Another instance is running, exit this one
+                Shutdown();
+                return;
+            }
+
             base.OnStartup(e);
 
             // Icons
