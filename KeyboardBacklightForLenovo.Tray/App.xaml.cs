@@ -265,6 +265,10 @@ namespace KeyboardBacklightForLenovo
             _autoKickCts?.Dispose();
             _autoKickCts = null;
 
+            try { _singleInstanceMutex?.ReleaseMutex(); } catch { /* ignore */ }
+            _singleInstanceMutex?.Dispose();
+            _singleInstanceMutex = null;
+
             base.OnExit(e);
         }
 
