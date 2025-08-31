@@ -1,0 +1,133 @@
+﻿<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <?include "GeneratedVariables.wxi" ?>
+  <?include "GeneratedVariablesService.wxi" ?>
+
+  <Package
+    Id="$(var.Company).$(var.RootNamespace).Installer"
+    Name="$(var.RootNamespace)"
+    Version="$(var.ProductVersion)"
+    Manufacturer="$(var.Company)"
+    UpgradeCode="a24ecd45-92ce-4b3e-947e-fb1ec414b025"
+    Language="1033"
+	  InstallerVersion="500"
+	  Compressed="yes"
+	  Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
+
+    <Feature Id="ProductFeature" Title="$(var.Product)" Level="1">
+      <ComponentRef Id="InstallFolderPerms" />
+      <ComponentRef Id ="DriversConfig" />
+      <ComponentRef Id="ServiceExe" />
+      <ComponentRef Id="EventLogSource" />
+    </Feature>
+
+    <ui:WixUI Id="WixUI_Mondo" />
+    <WixVariable Id="WixUILicenseRtf" Value="LICENSE.rtf" />
+
+    <Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
+
+    <InstallExecuteSequence>
+      <!-- Request reboot at the end of install if upgrading -->
+      <ScheduleReboot After="InstallFinalize" Condition="UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
+
+    <Property Id="DOTNET4X_FULLPATH" Secure="yes">
+      <RegistrySearch
+				Root="HKLM"
+				Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+				Name="InstallPath"
+				Type="raw" />
+    </Property>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="$(var.RootNamespace)" />
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="DriversConfig" Guid="aa2d9581-811d-413b-a975-30a65cb183f8">
+        <File Id="DriverConfig.json" Source="$(SolutionDir)bin\$(Platform)\Publish\DriversConfig.json" />
+      </Component >
+    </DirectoryRef>
+  </Fragment>
+
+  <Fragment>
+    <DirectoryRef Id="INSTALLFOLDER">
+
+      <!-- Ensure folder exists and grant LocalService RX on the folder -->
+      <Component Id="InstallFolderPerms" Guid="c27b41ae-834b-457b-ab5b-6d7fb313fef3">
+        <CreateFolder>
+          <util:PermissionEx
+					  User="NT AUTHORITY\LocalService"
+					  GenericRead="yes"
+					  GenericExecute="yes" />
+        </CreateFolder>
+      </Component>
+
+      <!-- Main service executable -->
+      <Component Id="ServiceExe" Guid="4ff08087-fe1d-4f8a-9fc3-8986d11afc98">
+        <File Id="SvcExe"
+					  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.ServiceAssemblyName).exe"
+					  KeyPath="yes">
+          <!-- Explicit RX on the file in case inheritance is blocked -->
+          <util:PermissionEx
+					  User="NT AUTHORITY\LocalService"
+					  GenericRead="yes"
+					  GenericExecute="yes" />
+        </File>
+
+        <!-- Windows service -->
+        <ServiceInstall
+				  Id="ServiceInstaller"
+				  Type="ownProcess"
+				  Name="$(var.ServiceAssemblyName)"
+				  DisplayName="$(var.ServiceAssemblyName)"
+				  Description="$(var.ServiceDescription)"
+				  Start="auto"
+				  Account="NT AUTHORITY\LocalService"
+				  ErrorControl="normal"
+				  Vital="yes">
+
+          <!-- Core service config (WiX built-in) -->
+          <ServiceConfig
+					  ServiceSid="1"
+					  OnInstall="yes"
+					  OnReinstall="yes"
+					  OnUninstall="no" />
+
+          <!-- Failure actions -->
+          <util:ServiceConfig
+					  FirstFailureActionType="restart"
+					  SecondFailureActionType="restart"
+					  ThirdFailureActionType="none"
+					  RestartServiceDelayInSeconds="60"
+					  ResetPeriodInDays="1" />
+        </ServiceInstall>
+
+        <ServiceControl
+				  Id="ServiceControl"
+				  Name="$(var.ServiceAssemblyName)"
+				  Start="install"
+				  Stop="both"
+				  Remove="both"
+				  Wait="yes" />
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+
+  <Fragment>
+    <Component Id="EventLogSource" Guid="92f8cb1f-0cf4-4949-be20-b44d973ac41e">
+      <util:EventSource
+				Name="$(var.ServiceAssemblyName)"
+				Log="Application"
+				EventMessageFile="[DOTNET4X_FULLPATH]EventLogMessages.dll" />
+    </Component>
+  </Fragment>
+</Wix>

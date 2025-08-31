@@ -10,9 +10,14 @@
     <InformationalVersion>$(ProductVersion)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 
+    <Company>SaltwaterC</Company>
+    <Product>Keyboard Backlight for Lenovo</Product>
+    <Copyright>Copyright © 2025</Copyright>
+
     <RootNamespace>KeyboardBacklightForLenovo</RootNamespace>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Platforms>x64;x86</Platforms>
+    <RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <UseWindowsService>true</UseWindowsService>
     <AssemblyName>BacklightResetService</AssemblyName>
+    <Description>Reset keyboard backlight to set value on boot or when resuming from sleep/hibernate when no user is logged on.</Description>
   </PropertyGroup>
 
   <ItemGroup>

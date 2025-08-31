@@ -7,26 +7,42 @@
 
         public ResetOrchestrator(SessionWatcher sessions) => _sessions = sessions;
 
-        public async Task TryResetIfNoUserAsync(string reason)
+        public async Task TryResetIfNoUserAsync(string reason, TimeSpan waitForUserSession = default)
         {
             try
             {
-                if (_sessions.IsAnyInteractiveUserActive())
+                // Optional: wait briefly for a session to appear if requested
+                if (waitForUserSession > TimeSpan.Zero)
                 {
-                    ServiceLogger.LogInfo($"[{reason}] Interactive user present -> skip.");
+                    var deadline = DateTime.UtcNow + waitForUserSession;
+                    var delay = TimeSpan.FromMilliseconds(500);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        if (_sessions.IsAnyUserLoggedOn())
+                        {
+                            ServiceLogger.LogInfo($"[{reason}] User logged on (after wait) -> skip.");
+                            return;
+                        }
+                        await Task.Delay(delay);
+                        // Exponential backoff up to 5s between checks
+                        if (delay < TimeSpan.FromSeconds(5)) delay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, 5000));
+                    }
+                }
+
+                if (_sessions.IsAnyUserLoggedOn())
+                {
+                    ServiceLogger.LogInfo($"[{reason}] User logged on -> skip.");
                     return;
                 }
-                else
-                {
-                    ServiceLogger.LogInfo($"[{reason}] No unlocked user session detected.");
-                }
+
+                ServiceLogger.LogInfo($"[{reason}] No logged-on user detected.");
 
                 // Avoid duplicate application within bursts of 1001
                 if ((DateTime.UtcNow - _lastReset) < TimeSpan.FromSeconds(1))
                     return;
 
                 var preferred = PreferredLevelStore.ReadPreferredLevel();
-                ServiceLogger.LogInfo($"[{reason}] No user. Preferred={preferred}. Applying reset...");
+                ServiceLogger.LogInfo($"[{reason}] No user session. Preferred={preferred}. Applying reset...");
 
                 using var ctrl = new KeyboardBacklightController();
                 int status = PreferredLevelStore.ReadPreferredLevel();

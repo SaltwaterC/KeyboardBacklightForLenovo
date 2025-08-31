@@ -5,10 +5,12 @@ namespace KeyboardBacklightForLenovo
     public sealed class SessionWatcher
     {
         /// <summary>
-        /// True only if there is at least one interactive **unlocked** user session.
-        /// Locked console / logon screen returns false.
+        /// True if there is any HUMAN user logged on (locked or unlocked).
+        /// Definition: any session with SessionId != 0 that has a non-empty user name
+        /// not belonging to built-in service/system accounts (SYSTEM, LOCAL/NETWORK SERVICE,
+        /// DWM-*, UMFD-*, defaultuser0), and in WTSActive state.
         /// </summary>
-        public bool IsAnyInteractiveUserActive()
+        public bool IsAnyUserLoggedOn()
         {
             if (!WtsApi32.WTSEnumerateSessions(IntPtr.Zero, 0, 1, out var pp, out var count))
                 return false;
@@ -21,52 +23,19 @@ namespace KeyboardBacklightForLenovo
                     var p = pp + i * size;
                     var info = Marshal.PtrToStructure<WtsApi32.WTS_SESSION_INFO>(p);
 
-                    // We only care about sessions that are attached to the console and "Active".
+                    // Exclude Session 0 (services), it's never a human session.
+                    if (info.SessionId == 0)
+                        continue;
+
+                    // Consider a human user present only when the session is active.
+                    // This avoids false positives from disconnected/idle sessions during boot.
                     if (info.State != WtsApi32.WTS_CONNECTSTATE_CLASS.WTSActive)
                         continue;
 
-                    // Ask for extended session info so we can tell Locked vs Unlocked.
-                    if (!WtsApi32.WTSQuerySessionInformation(IntPtr.Zero, info.SessionId,
-                            WtsApi32.WTS_INFO_CLASS.WTSSessionInfoEx, out var pInfoEx, out var _))
-                        continue;
-
-                    try
-                    {
-                        // The buffer starts with a WTSINFOEXW header with Level==1, followed by LEVEL1 data.
-                        var level = Marshal.ReadInt32(pInfoEx); // WTSINFOEXW.Level
-                        if (level != 1)
-                            continue;
-
-                        // Skip header (2 ints) to LEVEL1 struct.
-                        // WTSINFOEXW {
-                        //   DWORD Level; DWORD Reserved;
-                        //   union { WTSINFOEX_LEVEL1_W Level1; ... };
-                        // }
-                        var pLevel1 = pInfoEx + (sizeof(int) * 2);
-
-                        // Offsets inside LEVEL1 we care about:
-                        //   DWORD SessionId; WTS_CONNECTSTATE_CLASS SessionState; DWORD SessionFlags;
-                        // Layout: [SessionId:int][SessionState:int][SessionFlags:int]
-                        int sessionId = Marshal.ReadInt32(pLevel1 + 0);
-                        int sessionState = Marshal.ReadInt32(pLevel1 + 4);
-                        int sessionFlags = Marshal.ReadInt32(pLevel1 + 8);
-
-                        // Per WTSSessionInfoEx: SessionFlags==0 => Unlocked, 1 => Locked.
-                        bool isUnlocked = (sessionFlags == 0);
-
-                        if (isUnlocked)
-                        {
-                            // Optional: also ensure there’s a real username (not services).
-                            var user = WtsApi32.WTSQuerySessionString(IntPtr.Zero, sessionId, WtsApi32.WTS_INFO_CLASS.WTSUserName);
-                            if (!string.IsNullOrWhiteSpace(user) &&
-                                !IsServiceOrSystemUser(user))
-                                return true;
-                        }
-                    }
-                    finally
-                    {
-                        WtsApi32.WTSFreeMemory(pInfoEx);
-                    }
+                    var user = WtsApi32.WTSQuerySessionString(IntPtr.Zero, info.SessionId, WtsApi32.WTS_INFO_CLASS.WTSUserName);
+                    var domain = WtsApi32.WTSQuerySessionString(IntPtr.Zero, info.SessionId, WtsApi32.WTS_INFO_CLASS.WTSDomainName);
+                    if (!string.IsNullOrWhiteSpace(user) && !IsServiceOrSystemUser(user))
+                        return true;
                 }
             }
             finally
@@ -83,6 +52,7 @@ namespace KeyboardBacklightForLenovo
             return user.Equals("SYSTEM", StringComparison.OrdinalIgnoreCase)
                 || user.Equals("LOCAL SERVICE", StringComparison.OrdinalIgnoreCase)
                 || user.Equals("NETWORK SERVICE", StringComparison.OrdinalIgnoreCase)
+                || user.Equals("defaultuser0", StringComparison.OrdinalIgnoreCase)
                 || user.StartsWith("DWM-", StringComparison.OrdinalIgnoreCase)
                 || user.StartsWith("UMFD-", StringComparison.OrdinalIgnoreCase);
         }
@@ -132,6 +102,7 @@ namespace KeyboardBacklightForLenovo
         public enum WTS_INFO_CLASS
         {
             WTSUserName = 5,
+            WTSDomainName = 7,
             WTSSessionInfoEx = 24
         }
     }

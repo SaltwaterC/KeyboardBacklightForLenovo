@@ -26,7 +26,8 @@ namespace KeyboardBacklightForLenovo
             _sessions = new SessionWatcher();
             _orchestrator = new ResetOrchestrator(_sessions);
 
-            // Boot-time reset if no interactive user
+            // Boot-time reset only when there is NO unlocked user.
+            // No grace period; evaluate immediately.
             _ = _orchestrator.TryResetIfNoUserAsync("Boot");
 
             _screenWatcher = new ScreenOnWatcher();
