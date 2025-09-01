@@ -4,6 +4,9 @@
 
   <?include "GeneratedVariables.wxi" ?>
   <?include "GeneratedVariablesService.wxi" ?>
+  <?include "GeneratedVariablesCli.wxi" ?>
+  <?include "GeneratedVariablesTray.wxi" ?>
+  <?include "GeneratedVariablesTrayClose.wxi" ?>
 
   <Package
     Id="$(var.Company).$(var.RootNamespace).Installer"
@@ -23,6 +26,12 @@
       <ComponentRef Id ="DriversConfig" />
       <ComponentRef Id="ServiceExe" />
       <ComponentRef Id="EventLogSource" />
+      <ComponentRef Id="CliExe" />
+      <ComponentRef Id="TrayExe" />
+      <ComponentRef Id="TrayProgramMenuShortcut" />
+      <ComponentRef Id="TrayStartupShortcut" />
+      <ComponentRef Id="TrayRunAtLogon" />
+      <ComponentRef Id="TrayCloseExe" />
     </Feature>
 
     <ui:WixUI Id="WixUI_Mondo" />
@@ -33,7 +42,14 @@
     <InstallExecuteSequence>
       <!-- Request reboot at the end of install if upgrading -->
       <ScheduleReboot After="InstallFinalize" Condition="UPGRADINGPRODUCTCODE" />
+      <!-- Attempt to close the tray app using the CLI at the start of uninstall -->
+      <Custom Action="CloseTrayOnUninstall" Before="InstallValidate" Condition="REMOVE=&quot;ALL&quot;" />
     </InstallExecuteSequence>
+
+    <!-- UI sequence: launch Tray unelevated after ExecuteAction when installing -->
+    <InstallUISequence>
+      <Custom Action="LaunchTrayExe" After="ExecuteAction" Condition="NOT Installed" />
+    </InstallUISequence>
 
     <Property Id="DOTNET4X_FULLPATH" Secure="yes">
       <RegistrySearch
@@ -47,6 +63,64 @@
   <Fragment>
     <StandardDirectory Id="ProgramFiles6432Folder">
       <Directory Id="INSTALLFOLDER" Name="$(var.RootNamespace)" />
+    </StandardDirectory>
+  </Fragment>
+
+  <!-- Immediate EXE CA to launch tray under user context (UI sequence) -->
+  <Fragment>
+    <CustomAction Id="LaunchTrayExe"
+                  FileRef="TrayFile"
+                  ExeCommand=""
+                  Execute="immediate"
+                  Return="asyncNoWait" />
+  </Fragment>
+
+  <!-- Close tray via dedicated WinExe on uninstall -->
+  <Fragment>
+    <CustomAction Id="CloseTrayOnUninstall"
+                  FileRef="TrayCloseFile"
+                  ExeCommand=""
+                  Execute="immediate"
+                  Return="ignore"
+                  HideTarget="yes" />
+  </Fragment>
+
+  <!--
+  This could be an alternative to Restart Manager except it does not work
+  despite the Tray app implementing a hidden window that handles WM_CLOSE,
+  WM_QUERYENDSESSION, and WM_ENDSESSION. I'd appreciate if closing applications
+  would be less than a stack of shit in Windows if they don't actually have
+  a window and they are purely tray apps.
+  -->
+  <!--
+  <Fragment>
+    <util:CloseApplication
+      Id="CloseTrayApp"
+      Target="$(var.TrayAssemblyName)"
+      CloseMessage="yes"
+      EndSessionMessage="yes"
+      TerminateProcess="1"
+      RebootPrompt="no"
+      Description="Closing Keyboard Backlight Tray before uninstall/update"
+      Timeout="5" />
+  </Fragment>
+  -->
+
+  <Fragment>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="TrayProgramMenuShortcut" Guid="6f7a5f19-2e8b-4c54-bb1b-2d8c89f2a3d1">
+        <RegistryValue Root="HKCU"
+                       Key="Software\$(var.Company)\$(var.RootNamespace)"
+                       Name="ProgramMenuShortcut"
+                       Value="1"
+                       Type="string"
+                       KeyPath="yes" />
+        <Shortcut Id="TrayProgramMenuLnk"
+                  Directory="ProgramMenuFolder"
+                  Name="$(var.Product) Tray"
+                  Target="[INSTALLFOLDER]$(var.TrayAssemblyName).exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+      </Component>
     </StandardDirectory>
   </Fragment>
 
@@ -74,8 +148,8 @@
       <!-- Main service executable -->
       <Component Id="ServiceExe" Guid="4ff08087-fe1d-4f8a-9fc3-8986d11afc98">
         <File Id="SvcExe"
-					  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.ServiceAssemblyName).exe"
-					  KeyPath="yes">
+                  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.ServiceAssemblyName).exe"
+                  KeyPath="yes">
           <!-- Explicit RX on the file in case inheritance is blocked -->
           <util:PermissionEx
 					  User="NT AUTHORITY\LocalService"
@@ -112,14 +186,65 @@
         </ServiceInstall>
 
         <ServiceControl
-				  Id="ServiceControl"
-				  Name="$(var.ServiceAssemblyName)"
-				  Start="install"
-				  Stop="both"
-				  Remove="both"
-				  Wait="yes" />
+                  Id="ServiceControl"
+                  Name="$(var.ServiceAssemblyName)"
+                  Start="install"
+                  Stop="both"
+                  Remove="both"
+                  Wait="yes" />
+      </Component>
+
+      <!-- CLI executable -->
+      <Component Id="CliExe" Guid="b18d3d8a-1c2f-4b8a-9f4b-9d2d3a1f4e21">
+        <File Id="CliFile"
+                  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.CliAssemblyName).exe"
+                  KeyPath="yes" />
+      </Component>
+
+      <!-- Tray executable -->
+      <Component Id="TrayExe" Guid="2a5b7f06-3c6c-4c3f-8c9a-8da1a8b8b3ad">
+        <File Id="TrayFile"
+                  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.TrayAssemblyName).exe"
+                  KeyPath="yes" />
+      </Component>
+
+      <!-- Tray close helper (WinExe, no console window) -->
+      <Component Id="TrayCloseExe" Guid="d7c2a5a8-7f49-4f8f-8db9-4a5e61b8c2e1">
+        <File Id="TrayCloseFile"
+                  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.TrayCloseAssemblyName).exe"
+                  KeyPath="yes" />
+      </Component>
+
+      <!-- Auto-start Tray at user logon for all users via HKLM Run -->
+      <Component Id="TrayRunAtLogon" Guid="7a2f4b1a-1b13-4a57-9e34-e2d7d1d9b9a3">
+        <RegistryValue
+            Root="HKLM"
+            Key="Software\Microsoft\Windows\CurrentVersion\Run"
+            Name="$(var.TrayAssemblyName)"
+            Value="&quot;[INSTALLFOLDER]$(var.TrayAssemblyName).exe&quot;"
+            Type="string"
+            KeyPath="yes" />
       </Component>
     </DirectoryRef>
+  </Fragment>
+
+  <Fragment>
+    <StandardDirectory Id="StartupFolder">
+      <Component Id="TrayStartupShortcut" Guid="8a1c1b5d-6b7e-4f1a-9a52-e4a8d6b3c2f1">
+        <!-- Per-user KeyPath required for shortcuts in user profile (fixes ICE38/ICE43/ICE57) -->
+        <RegistryValue Root="HKCU"
+                       Key="Software\$(var.Company)\$(var.RootNamespace)"
+                       Name="StartupShortcut"
+                       Value="1"
+                       Type="string"
+                       KeyPath="yes" />
+        <Shortcut Id="TrayStartupLnk"
+                  Directory="StartupFolder"
+                  Name="$(var.Product)"
+                  Target="[INSTALLFOLDER]$(var.TrayAssemblyName).exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+      </Component>
+    </StandardDirectory>
   </Fragment>
 
   <Fragment>

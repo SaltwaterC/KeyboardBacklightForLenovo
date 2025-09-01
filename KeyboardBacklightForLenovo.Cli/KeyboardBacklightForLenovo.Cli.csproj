@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>keyboard-backlight</AssemblyName>
+    <Description>Keyboard Backlight for Lenovo CLI</Description>
   </PropertyGroup>
 
   <ItemGroup>

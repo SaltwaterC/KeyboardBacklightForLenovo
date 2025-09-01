@@ -1,6 +1,6 @@
-# MSBuild / WiX XML
-[*.{csproj,wixproj,props,targets,wxs,wxl,proj,vcxproj}]
+﻿# Line endings and formatting for VS-friendly CRLF
+[*.{cs,csx,xaml,csproj,wixproj,props,targets,wxs,wxl,proj,vcxproj}]
 indent_style = space
 indent_size = 2
 insert_final_newline = true
-end_of_line = lf
+end_of_line = crlf

@@ -10,6 +10,7 @@
   <ItemGroup>
     <Content Include="DriversConfig.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
 

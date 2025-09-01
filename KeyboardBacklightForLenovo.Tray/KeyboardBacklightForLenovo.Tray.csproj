@@ -5,6 +5,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>BacklightTrayApp</AssemblyName>
+    <Description>Keyboard Backlight for Lenovo Tray application</Description>
   </PropertyGroup>
 
   <PropertyGroup>

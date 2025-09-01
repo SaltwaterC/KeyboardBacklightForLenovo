@@ -1,45 +1,50 @@
 ﻿<Project Sdk="WixToolset.Sdk/6.0.2">
   <Import Project="..\Variables.props" />
-
   <PropertyGroup>
     <OutputName>$(RootNamespace)-$(Platform)-$(ProductVersion)</OutputName>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\KeyboardBacklightForLenovo.Cli\KeyboardBacklightForLenovo.Cli.csproj" />
     <ProjectReference Include="..\KeyboardBacklightForLenovo.Core\KeyboardBacklightForLenovo.Core.csproj" />
     <ProjectReference Include="..\KeyboardBacklightForLenovo.Service\KeyboardBacklightForLenovo.Service.csproj" />
     <ProjectReference Include="..\KeyboardBacklightForLenovo.Tray\KeyboardBacklightForLenovo.Tray.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
     <PackageReference Include="WixToolset.Util.wixext" Version="6.0.2" />
   </ItemGroup>
-
   <Target Name="GenerateWiXVariables" BeforeTargets="BeforeBuild">
     <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)GenerateWiXVariables.ps1&quot;" />
     <Exec Command="powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command &quot;$ErrorActionPreference='Stop'; $dm=@{ AssemblyName='ServiceAssemblyName'; Description='ServiceDescription' }; &amp; '$(ProjectDir)GenerateWiXVariables.ps1' -Project '$(SolutionDir)\$(RootNamespace).Service\$(RootNamespace).Service.csproj' -Out '$(ProjectDir)GeneratedVariablesService.wxi' -Properties 'AssemblyName','Description' -DefineMap $dm&quot;" />
+    <Exec Command="powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command &quot;$ErrorActionPreference='Stop'; $dm=@{ AssemblyName='TrayAssemblyName'; Description='TrayDescription' }; &amp; '$(ProjectDir)GenerateWiXVariables.ps1' -Project '$(SolutionDir)\$(RootNamespace).Tray\$(RootNamespace).Tray.csproj' -Out '$(ProjectDir)GeneratedVariablesTray.wxi' -Properties 'AssemblyName','Description' -DefineMap $dm&quot;" />
+    <Exec Command="powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command &quot;$ErrorActionPreference='Stop'; $dm=@{ AssemblyName='CliAssemblyName'; Description='CliDescription' }; &amp; '$(ProjectDir)GenerateWiXVariables.ps1' -Project '$(SolutionDir)\$(RootNamespace).Cli\$(RootNamespace).Cli.csproj' -Out '$(ProjectDir)GeneratedVariablesCli.wxi' -Properties 'AssemblyName','Description' -DefineMap $dm&quot;" />
+    <Exec Command="powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command &quot;$ErrorActionPreference='Stop'; $dm=@{ AssemblyName='TrayCloseAssemblyName'; Description='TrayCloseDescription' }; &amp; '$(ProjectDir)GenerateWiXVariables.ps1' -Project '$(SolutionDir)\$(RootNamespace).TrayClose\$(RootNamespace).TrayClose.csproj' -Out '$(ProjectDir)GeneratedVariablesTrayClose.wxi' -Properties 'AssemblyName','Description' -DefineMap $dm&quot;" />
   </Target>
-
   <!-- Ensure service publish artifacts exist before WiX binds files -->
   <Target Name="PublishServiceForInstaller" BeforeTargets="BeforeBuild">
     <Message Importance="high" Text="Publishing service (Platform=$(Platform), Configuration=$(Configuration)) for installer..." />
-    <MSBuild Projects="$(SolutionDir)$(RootNamespace).Service\$(RootNamespace).Service.csproj"
-             Targets="Publish"
-             Properties="Configuration=$(Configuration);Platform=$(Platform);PublishProfile=Folder-$(Platform)" />
-    <MSBuild Projects="$(SolutionDir)$(RootNamespace).Cli\$(RootNamespace).Cli.csproj"
-             Targets="Publish"
-             Properties="Configuration=$(Configuration);Platform=$(Platform);PublishProfile=Folder-$(Platform)" />
-    <MSBuild Projects="$(SolutionDir)$(RootNamespace).Tray\$(RootNamespace).Tray.csproj"
-             Targets="Publish"
-             Properties="Configuration=$(Configuration);Platform=$(Platform);PublishProfile=Folder-$(Platform)" />
+    <MSBuild Projects="$(SolutionDir)$(RootNamespace).Service\$(RootNamespace).Service.csproj" Targets="Publish" Properties="Configuration=$(Configuration);Platform=$(Platform);PublishProfile=Folder-$(Platform)" />
+    <MSBuild Projects="$(SolutionDir)$(RootNamespace).Cli\$(RootNamespace).Cli.csproj" Targets="Publish" Properties="Configuration=$(Configuration);Platform=$(Platform);PublishProfile=Folder-$(Platform)" />
+    <MSBuild Projects="$(SolutionDir)$(RootNamespace).Tray\$(RootNamespace).Tray.csproj" Targets="Publish" Properties="Configuration=$(Configuration);Platform=$(Platform);PublishProfile=Folder-$(Platform)" />
+    <MSBuild Projects="$(SolutionDir)$(RootNamespace).TrayClose\$(RootNamespace).TrayClose.csproj" Targets="Restore;Publish" Properties="Configuration=$(Configuration);Platform=$(Platform);PublishProfile=Folder-$(Platform)" />
   </Target>
 
+  <!-- Ensure DriversConfig.json is present in the Publish staging folder for WiX binding, every build -->
+  <Target Name="CopyDriversConfigToPublish" AfterTargets="PublishServiceForInstaller">
+    <PropertyGroup>
+      <TrayBinDir>$(SolutionDir)$(RootNamespace).Tray\bin\$(Configuration)\net8.0-windows\win-$(Platform)</TrayBinDir>
+      <PublishDir>$(SolutionDir)bin\$(Platform)\Publish</PublishDir>
+      <DriversConfigSource>$(TrayBinDir)\DriversConfig.json</DriversConfigSource>
+    </PropertyGroup>
+    <Message Importance="high" Text="Ensuring DriversConfig.json is in $(PublishDir)" />
+    <Copy SourceFiles="$(DriversConfigSource)"
+          DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(DriversConfigSource)')" />
+  </Target>
   <Target Name="VerifyMsiArch" AfterTargets="Build">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)VerifyArch.ps1&quot; -Expected &quot;$(Platform)&quot; -Msi &quot;$(TargetPath)&quot;" />
   </Target>
-
   <PropertyGroup>
     <!-- util:ServiceConfig is not a 1:1 replacement for ServiceConfig -->
     <NoWarn>WIX1149</NoWarn>

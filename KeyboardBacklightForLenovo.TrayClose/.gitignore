@@ -1,8 +1,4 @@
-.vs/*
-.vscode/*
 bin/*
 obj/*
 *.csproj.user
 *.pubxml.user
-RESUME.md
-*.log
