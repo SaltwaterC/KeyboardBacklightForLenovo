@@ -55,7 +55,21 @@ namespace KeyboardBacklightForLenovo
       {
         if (_registryKey is null) return false;
         var data = _registryKey.GetValue("Data") as byte[];
-        return data is not null && data.Length > 18 && data[18] == 0x15;
+        if (data is null || data.Length < 19) return false;
+
+        // Heuristics for different Windows builds:
+        // - Older builds: byte[18] == 0x15 when ON, 0x13 when OFF
+        // - Newer builds (observed): presence of 0x10 0x00 at indices 23..24 indicates ON
+        byte b = data[18];
+        if (b == 0x15) return true;          // legacy ON
+        if (b == 0x13) return false;         // legacy OFF
+
+        // Newer layout: check for 0x10 0x00 field around 23..24
+        if (data.Length > 24 && data[23] == 0x10 && data[24] == 0x00)
+          return true;
+
+        // Fallback: treat as OFF
+        return false;
       }
     }
 
