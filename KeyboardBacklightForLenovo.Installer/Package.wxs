@@ -75,7 +75,6 @@
                   Return="asyncNoWait" />
   </Fragment>
 
-  <!-- Close tray via dedicated WinExe on uninstall -->
   <Fragment>
     <CustomAction Id="CloseTrayOnUninstall"
                   FileRef="TrayCloseFile"
@@ -84,27 +83,6 @@
                   Return="ignore"
                   HideTarget="yes" />
   </Fragment>
-
-  <!--
-  This could be an alternative to Restart Manager except it does not work
-  despite the Tray app implementing a hidden window that handles WM_CLOSE,
-  WM_QUERYENDSESSION, and WM_ENDSESSION. I'd appreciate if closing applications
-  would be less than a stack of shit in Windows if they don't actually have
-  a window and they are purely tray apps.
-  -->
-  <!--
-  <Fragment>
-    <util:CloseApplication
-      Id="CloseTrayApp"
-      Target="$(var.TrayAssemblyName)"
-      CloseMessage="yes"
-      EndSessionMessage="yes"
-      TerminateProcess="1"
-      RebootPrompt="no"
-      Description="Closing Keyboard Backlight Tray before uninstall/update"
-      Timeout="5" />
-  </Fragment>
-  -->
 
   <Fragment>
     <StandardDirectory Id="ProgramMenuFolder">

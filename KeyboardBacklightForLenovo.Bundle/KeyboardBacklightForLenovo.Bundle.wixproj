@@ -1,0 +1,39 @@
+﻿<Project Sdk="WixToolset.Sdk/6.0.2">
+  <!-- Import shared variables (ProductVersion, Company, Product, Platforms, OutputPaths, etc.) -->
+  <Import Project="..\Variables.props" />
+  <PropertyGroup>
+    <OutputName>KeyboardBacklightForLenovo-Bundle-$(Platform)-$(ProductVersion)</OutputName>
+    <OutputType>Bundle</OutputType>
+    <!-- Platforms and other props come from Variables.props -->
+    <DefineConstants>ProductVersion=$(ProductVersion);Company=$(Company);RootNamespace=$(RootNamespace);Product=$(Product)</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Bundle Include="Bundle.wxs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.BootstrapperApplications.wixext" Version="6.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\KeyboardBacklightForLenovo.Installer\KeyboardBacklightForLenovo.Installer.wixproj" />
+  </ItemGroup>
+  <Target Name="FetchScreenStateService" BeforeTargets="PrepareForBuild">
+    <Message Text="Fetching latest ScreenStateService release..." Importance="high" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)\FetchScreenStateService.ps1&quot; -OutDir &quot;$(MSBuildThisFileDirectory)\External&quot; -Arch &quot;$(Platform)&quot;" />
+  </Target>
+  <!-- No build-time versioning; shim resolves latest LTS at install time. -->
+  <Target Name="BuildDotNetShim" BeforeTargets="PrepareForBuild">
+    <Message Text="Building .NET Desktop Runtime shim..." Importance="high" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)\BuildDotNetShim.ps1&quot; -ProjectDir &quot;$(MSBuildThisFileDirectory)&quot;" />
+  </Target>
+  <ItemGroup>
+    <Content Include="External\ScreenStateService-$(Platform).msi">
+      <Pack>false</Pack>
+    </Content>
+    <Content Include="External\InstallDotNetDesktopRuntime.exe">
+      <Pack>false</Pack>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="BuildDotNetShim.ps1" />
+  </ItemGroup>
+</Project>

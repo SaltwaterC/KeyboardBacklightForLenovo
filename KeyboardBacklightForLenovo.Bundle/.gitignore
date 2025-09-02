@@ -1,0 +1,5 @@
+bin/*
+obj/*
+*.csproj.user
+External/*.exe
+External/*.msi

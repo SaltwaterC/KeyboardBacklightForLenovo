@@ -1,0 +1,63 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
+
+  <!-- DotNet80Latest is injected via MSBuild DefineConstants at build time -->
+  <?define ProductVersion=$(var.ProductVersion) ?>
+  <?define Company=$(var.Company) ?>
+  <?define RootNamespace=$(var.RootNamespace) ?>
+  <?define Product=$(var.Product) ?>
+  <?if $(var.Platform) = x64 ?>
+  <?define LaunchDir=[ProgramFiles64Folder] ?>
+  <?else?>
+  <?define LaunchDir=[ProgramFilesFolder] ?>
+  <?endif?>
+
+  <Bundle
+    Name="$(var.Product)"
+    Version="$(var.ProductVersion)"
+    Manufacturer="$(var.Company)"
+    UpgradeCode="b1b7a9b9-0a93-4b3e-9cde-0a8e1d9f3f11">
+
+    <BootstrapperApplication>
+      <bal:WixStandardBootstrapperApplication Theme="hyperlinkLicense"
+                                             LicenseUrl="https://github.com/SaltwaterC/KeyboardBacklightForLenovo?tab=MIT-1-ov-file"
+                                             LaunchTarget="$(var.LaunchDir)$(var.RootNamespace)\BacklightTrayApp.exe" />
+    </BootstrapperApplication>
+
+
+
+    <!-- Launch checkbox configured via LaunchTarget attribute above -->
+
+    <!-- No DetectCondition: the shim handles runtime detection at install time. -->
+
+    <Chain>
+      <!-- .NET 8 Windows Desktop Runtime shim: downloads & installs latest 8.0 securely -->
+      <ExePackage Id="DotNetDesktopRuntimeShim"
+                  SourceFile="External\\InstallDotNetDesktopRuntime.exe"
+                  Permanent="yes"
+                  Vital="yes">
+        <?if $(var.Platform) = x64 ?>
+        <ArpEntry Id="DotNetDesktopRuntimeShim" Version="0.0.0.0" Win64="yes" />
+        <?else?>
+        <ArpEntry Id="DotNetDesktopRuntimeShim" Version="0.0.0.0" Win64="no" />
+        <?endif?>
+      </ExePackage>
+
+      <MsiPackage Id="ScreenStateService"
+                  SourceFile="External\\ScreenStateService-$(Platform).msi"
+                  Permanent="yes"
+                  Vital="yes" />
+
+      <!-- Main product MSI built by Installer project -->
+      <MsiPackage Id="MainProduct"
+                  SourceFile="..\\bin\\$(Platform)\\Release\\$(var.RootNamespace)-$(Platform)-$(var.ProductVersion).msi"
+                  Permanent="no"
+                  Vital="yes" />
+
+      <!-- No extra exe; WixStdBA will launch target if user selects it. -->
+    </Chain>
+
+  </Bundle>
+</Wix>
+
+
