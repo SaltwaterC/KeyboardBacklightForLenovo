@@ -105,5 +105,36 @@ namespace KeyboardBacklightForLenovo
             WTSDomainName = 7,
             WTSSessionInfoEx = 24
         }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct WTSINFOEX
+        {
+            public int Level;
+            public WTSINFOEX_LEVEL1 Data;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct WTSINFOEX_LEVEL1
+        {
+            public int SessionId;
+            public WTS_CONNECTSTATE_CLASS SessionState;
+            public int SessionFlags;
+
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 33)]
+            public string WinStationName;
+
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 21)]
+            public string UserName;
+
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 18)]
+            public string DomainName;
+
+            public long LogonTime;
+            public long ConnectTime;
+            public long DisconnectTime;
+            public long LastInputTime;
+            public long CurrentTime;
+            public long TimeZoneBias;
+        }
     }
 }
