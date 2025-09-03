@@ -6,9 +6,15 @@ namespace KeyboardBacklightForLenovo
     {
         /// <summary>
         /// True if there is any HUMAN user logged on (locked or unlocked).
-        /// Definition: any session with SessionId != 0 that has a non-empty user name
-        /// not belonging to built-in service/system accounts (SYSTEM, LOCAL/NETWORK SERVICE,
-        /// DWM-*, UMFD-*, defaultuser0), and in WTSActive state.
+        ///
+        /// We rely on WTSSessionInfoEx as WTSUserName may return the last logged-on
+        /// user even when nobody is currently signed in. A human user session is
+        /// considered present when:
+        ///   * SessionId != 0 (services),
+        ///   * SessionState == WTSActive,
+        ///   * SessionFlags indicate Locked or Unlocked, and
+        ///   * The embedded UserName from WTSSessionInfoEx is non-empty and not a
+        ///     well-known service account.
         /// </summary>
         public bool IsAnyUserLoggedOn()
         {
@@ -27,15 +33,35 @@ namespace KeyboardBacklightForLenovo
                     if (info.SessionId == 0)
                         continue;
 
-                    // Consider a human user present only when the session is active.
-                    // This avoids false positives from disconnected/idle sessions during boot.
+                    // Only consider sessions that are active on the console.
                     if (info.State != WtsApi32.WTS_CONNECTSTATE_CLASS.WTSActive)
                         continue;
 
-                    var user = WtsApi32.WTSQuerySessionString(IntPtr.Zero, info.SessionId, WtsApi32.WTS_INFO_CLASS.WTSUserName);
-                    var domain = WtsApi32.WTSQuerySessionString(IntPtr.Zero, info.SessionId, WtsApi32.WTS_INFO_CLASS.WTSDomainName);
-                    if (!string.IsNullOrWhiteSpace(user) && !IsServiceOrSystemUser(user))
-                        return true;
+                    if (!WtsApi32.WTSQuerySessionInformation(IntPtr.Zero, info.SessionId,
+                            WtsApi32.WTS_INFO_CLASS.WTSSessionInfoEx, out var pInfo, out _))
+                        continue;
+
+                    try
+                    {
+                        var infoEx = Marshal.PtrToStructure<WtsApi32.WTSINFOEX>(pInfo);
+                        if (infoEx.Level != 1)
+                            continue;
+                        var level1 = infoEx.Data;
+
+                        // Only Locked or Unlocked sessions with a valid logon time count as human.
+                        if (level1.SessionFlags != WtsApi32.WTS_SESSIONSTATE_LOCK && level1.SessionFlags != WtsApi32.WTS_SESSIONSTATE_UNLOCK)
+                            continue;
+                        if (level1.LogonTime == 0)
+                            continue;
+
+                        string? user = level1.UserName;
+                        if (!string.IsNullOrWhiteSpace(user) && !IsServiceOrSystemUser(user))
+                            return true;
+                    }
+                    finally
+                    {
+                        WtsApi32.WTSFreeMemory(pInfo);
+                    }
                 }
             }
             finally
@@ -60,6 +86,8 @@ namespace KeyboardBacklightForLenovo
 
     internal static class WtsApi32
     {
+        public const int WTS_SESSIONSTATE_LOCK = 0x1;
+        public const int WTS_SESSIONSTATE_UNLOCK = 0x2;
         [DllImport("Wtsapi32.dll")]
         public static extern bool WTSEnumerateSessions(IntPtr hServer, int Reserved, int Version, out IntPtr ppSessionInfo, out int pCount);
 
@@ -83,6 +111,39 @@ namespace KeyboardBacklightForLenovo
             public int SessionId;
             public IntPtr pWinStationName;
             public WTS_CONNECTSTATE_CLASS State;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WTSINFOEX
+        {
+            public int Level;
+            public int Reserved;
+            public WTSINFOEX_LEVEL1 Data;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct WTSINFOEX_LEVEL1
+        {
+            public int SessionId;
+            public WTS_CONNECTSTATE_CLASS SessionState;
+            public int SessionFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 33)]
+            public string WinStationName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+            public string UserName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+            public string DomainName;
+            public long LogonTime;
+            public long ConnectTime;
+            public long DisconnectTime;
+            public long LastInputTime;
+            public long CurrentTime;
+            public int IncomingBytes;
+            public int OutgoingBytes;
+            public int IncomingFrames;
+            public int OutgoingFrames;
+            public int IncomingCompressedBytes;
+            public int OutgoingCompressedBytes;
         }
 
         public enum WTS_CONNECTSTATE_CLASS
