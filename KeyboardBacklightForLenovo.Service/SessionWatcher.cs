@@ -60,13 +60,13 @@ namespace KeyboardBacklightForLenovo
 
     internal static class WtsApi32
     {
-        [DllImport("Wtsapi32.dll")]
+        [DllImport("Wtsapi32.dll", CharSet = CharSet.Unicode)]
         public static extern bool WTSEnumerateSessions(IntPtr hServer, int Reserved, int Version, out IntPtr ppSessionInfo, out int pCount);
 
-        [DllImport("Wtsapi32.dll")]
+        [DllImport("Wtsapi32.dll", CharSet = CharSet.Unicode)]
         public static extern void WTSFreeMemory(IntPtr pMemory);
 
-        [DllImport("Wtsapi32.dll")]
+        [DllImport("Wtsapi32.dll", CharSet = CharSet.Unicode)]
         public static extern bool WTSQuerySessionInformation(IntPtr hServer, int SessionId, WTS_INFO_CLASS WTSInfoClass, out IntPtr ppBuffer, out int pBytesReturned);
 
         public static string WTSQuerySessionString(IntPtr server, int sessionId, WTS_INFO_CLASS cls)
