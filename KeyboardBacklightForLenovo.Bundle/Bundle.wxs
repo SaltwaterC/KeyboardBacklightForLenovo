@@ -19,8 +19,8 @@
     UpgradeCode="b1b7a9b9-0a93-4b3e-9cde-0a8e1d9f3f11">
 
     <BootstrapperApplication>
-      <bal:WixStandardBootstrapperApplication Theme="hyperlinkLicense"
-                                             LicenseUrl="https://github.com/SaltwaterC/KeyboardBacklightForLenovo?tab=MIT-1-ov-file"
+      <bal:WixStandardBootstrapperApplication Theme="rtfLicense"
+                                             LicenseFile="LICENSE.rtf"
                                              LaunchTarget="$(var.LaunchDir)$(var.RootNamespace)\BacklightTrayApp.exe" />
     </BootstrapperApplication>
 
