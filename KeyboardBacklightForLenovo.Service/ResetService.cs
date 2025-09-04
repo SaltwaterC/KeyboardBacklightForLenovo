@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.ServiceProcess;
 
 namespace KeyboardBacklightForLenovo
@@ -8,8 +9,6 @@ namespace KeyboardBacklightForLenovo
         public const string ServiceNameConst = "BacklightResetService";
 
         private ScreenOnWatcher? _screenWatcher;
-        private SessionWatcher? _sessions;
-        private ResetOrchestrator? _orchestrator;
 
         public ResetService()
         {
@@ -23,15 +22,14 @@ namespace KeyboardBacklightForLenovo
         {
             ServiceLogger.LogInfo("Service starting...");
 
-            _sessions = new SessionWatcher();
-            _orchestrator = new ResetOrchestrator(_sessions);
-
-            // Boot-time reset only when there is NO unlocked user.
-            // No grace period; evaluate immediately.
-            _ = _orchestrator.TryResetIfNoUserAsync("Boot");
+            TryReset("Boot");
 
             _screenWatcher = new ScreenOnWatcher();
-            _screenWatcher.OnScreenOn += OnScreenOnAsync;
+            _screenWatcher.OnScreenOn += () =>
+            {
+                TryReset("ScreenOn(EventID=1001)");
+                return System.Threading.Tasks.Task.CompletedTask;
+            };
             try
             {
                 _screenWatcher.Start();
@@ -43,11 +41,38 @@ namespace KeyboardBacklightForLenovo
             }
         }
 
-        private async System.Threading.Tasks.Task OnScreenOnAsync()
+        private void TryReset(string reason)
         {
-            // Delegate to orchestrator; it already handles burst/throttle + user presence.
-            if (_orchestrator is not null)
-                await _orchestrator.TryResetIfNoUserAsync("ScreenOn(EventID=1001)");
+            if (IsTrayRunning())
+            {
+                ServiceLogger.LogInfo($"[{reason}] Tray running -> skip.");
+                return;
+            }
+
+            try
+            {
+                int preferred = PreferredLevelStore.ReadPreferredLevel();
+                ServiceLogger.LogInfo($"[{reason}] Tray not running. Preferred={preferred}. Applying reset...");
+                using var ctrl = new KeyboardBacklightController();
+                ctrl.ResetStatus(preferred);
+                ServiceLogger.LogInfo($"[{reason}] Reset applied successfully.");
+            }
+            catch (Exception ex)
+            {
+                ServiceLogger.LogError($"[{reason}] Reset failed: {ex}");
+            }
+        }
+
+        private static bool IsTrayRunning()
+        {
+            try
+            {
+                return Process.GetProcessesByName("BacklightTrayApp").Length > 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         protected override void OnStop()
