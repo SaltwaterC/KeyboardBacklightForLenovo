@@ -43,7 +43,7 @@
       <!-- Request reboot at the end of install if upgrading -->
       <ScheduleReboot After="InstallFinalize" Condition="UPGRADINGPRODUCTCODE" />
       <!-- Attempt to close the tray app using the CLI at the start of uninstall -->
-      <Custom Action="CloseTrayOnUninstall" Before="InstallValidate" Condition="REMOVE=&quot;ALL&quot;" />
+      <Custom Action="CloseTrayOnUninstall" After="CostFinalize" Condition="Installed AND NOT UPGRADINGPRODUCTCODE AND (&amp;ProductFeature=2 OR REMOVE~=&quot;ALL&quot;)" />
     </InstallExecuteSequence>
 
     <!-- UI sequence: launch Tray unelevated after ExecuteAction when installing -->
@@ -80,8 +80,7 @@
                   FileRef="TrayCloseFile"
                   ExeCommand=""
                   Execute="immediate"
-                  Return="ignore"
-                  HideTarget="yes" />
+                  Return="ignore"/>
   </Fragment>
 
   <Fragment>
