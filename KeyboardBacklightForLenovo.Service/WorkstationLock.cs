@@ -50,10 +50,10 @@ namespace KeyboardBacklightForLenovo
         // Minimal interop needed for WTSSessionInfoEx
         private static class WtsNative
         {
-            [DllImport("Wtsapi32.dll")]
+            [DllImport("Wtsapi32.dll", CharSet = CharSet.Unicode)]
             public static extern bool WTSQuerySessionInformation(IntPtr hServer, int SessionId, WTS_INFO_CLASS WTSInfoClass, out IntPtr ppBuffer, out int pBytesReturned);
 
-            [DllImport("Wtsapi32.dll")]
+            [DllImport("Wtsapi32.dll", CharSet = CharSet.Unicode)]
             public static extern void WTSFreeMemory(IntPtr pMemory);
 
             [DllImport("Kernel32.dll")]
