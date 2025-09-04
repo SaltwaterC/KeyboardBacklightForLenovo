@@ -21,29 +21,64 @@ function Get-OsArch {
 }
 
 function Test-DotNetDesktopRuntimeInstalled {
-    param([string]$MajorMinor, [string]$Arch)
-    # Checks registry for any installed Microsoft.WindowsDesktop.App version starting with MajorMinor (e.g., '8.0').
-    $paths = @()
-    if ($Arch -eq 'x64') {
-        $paths += 'HKLM:\SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App'
-    } else {
-        $paths += 'HKLM:\SOFTWARE\dotnet\Setup\InstalledVersions\x86\sharedfx\Microsoft.WindowsDesktop.App'
-        # Also check WOW6432 on 64-bit OS for consistency
-        if ([Environment]::Is64BitOperatingSystem) {
-            $paths += 'HKLM:\SOFTWARE\WOW6432Node\dotnet\Setup\InstalledVersions\x86\sharedfx\Microsoft.WindowsDesktop.App'
+    param(
+        [Parameter(Mandatory)] [string]$MajorMinor, # e.g. '8.0'
+        [Parameter(Mandatory)] [ValidateSet('x64','x86')] [string]$Arch
+    )
+
+    # --- 1) ARP / Uninstall keys (both views) ---
+    $archLabel = if ($Arch -eq 'x64') { '(x64)' } else { '(x86)' }
+    $uninstallRoots = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+    )
+
+    foreach ($root in $uninstallRoots) {
+        if (-not (Test-Path $root)) { continue }
+        foreach ($sub in Get-ChildItem $root -ErrorAction SilentlyContinue) {
+            $p = Get-ItemProperty $sub.PSPath -ErrorAction SilentlyContinue
+            if (-not $p) { continue }
+
+            # Safely fetch props (no-throw if missing)
+            $dn = ($p | Select-Object -ExpandProperty DisplayName -ErrorAction SilentlyContinue)
+            $dv = ($p | Select-Object -ExpandProperty DisplayVersion -ErrorAction SilentlyContinue)
+
+            if (-not $dn -or -not $dv) { continue }
+            # We only care about Microsoft Windows Desktop Runtime entries
+            if ($dn -notlike 'Microsoft Windows Desktop Runtime*') { continue }
+            # Version must match requested major.minor (e.g. 8.0.*)
+            if ($dv -notlike "$MajorMinor.*") { continue }
+            # Architecture check: most entries suffix the name with "(x64)/(x86)"
+            if ($dn -match "\((x64|x86)\)$") {
+                if ($Matches[1] -ne $Arch) { continue }
+            }
+            return $true
         }
     }
 
-    foreach ($p in $paths) {
-        if (Test-Path $p) {
-            $items = Get-ItemProperty -Path $p -ErrorAction SilentlyContinue
-            if ($items) {
-                foreach ($name in ($items.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' } | Select-Object -ExpandProperty Name)) {
-                    if ($name -like "$MajorMinor.*") { return $true }
-                }
-            }
+    # --- 2) dotnet --list-runtimes ---
+    $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
+    if ($dotnet) {
+        $lines = & $dotnet.Source --list-runtimes 2>$null
+        if ($lines -match "^Microsoft\.WindowsDesktop\.App\s+$MajorMinor\.\d+\s") {
+            return $true
         }
     }
+
+    # --- 3) sharedfx registry (present on many machines, not all) ---
+    $sharedFxKey = if ($Arch -eq 'x64') {
+        'HKLM:\SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App'
+    } else {
+        'HKLM:\SOFTWARE\dotnet\Setup\InstalledVersions\x86\sharedfx\Microsoft.WindowsDesktop.App'
+    }
+    if (Test-Path $sharedFxKey) {
+        $props = (Get-ItemProperty $sharedFxKey -ErrorAction SilentlyContinue).PSObject.Properties |
+                 Where-Object { $_.MemberType -eq 'NoteProperty' }
+        foreach ($prop in $props) {
+            if ($prop.Name -like "$MajorMinor.*") { return $true }
+        }
+    }
+
     return $false
 }
 

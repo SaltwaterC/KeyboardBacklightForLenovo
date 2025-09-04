@@ -35,5 +35,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="BuildDotNetShim.ps1" />
+    <None Include="InstallDotNetDesktopRuntime.ps1" />
   </ItemGroup>
 </Project>
