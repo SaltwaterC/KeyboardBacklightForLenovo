@@ -23,7 +23,7 @@
   <!-- No build-time versioning; shim resolves latest LTS at install time. -->
   <Target Name="BuildDotNetShim" BeforeTargets="PrepareForBuild">
     <Message Text="Building .NET Desktop Runtime shim..." Importance="high" />
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)\BuildDotNetShim.ps1&quot; -ProjectDir &quot;$(MSBuildThisFileDirectory)&quot; -Arch &quot;$(Platform)&quot;" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)\BuildDotNetShim.ps1&quot; -ProjectDir &quot;$(MSBuildThisFileDirectory).&quot; -Arch &quot;$(Platform)&quot;" />
   </Target>
   <ItemGroup>
     <Content Include="External\ScreenStateService-$(Platform).msi">

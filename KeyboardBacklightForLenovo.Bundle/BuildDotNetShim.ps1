@@ -49,6 +49,16 @@ function Compile-Shim {
 }
 
 $proj = if ($ProjectDir) { $ProjectDir } else { $PSScriptRoot }
+# When invoked from cmd.exe with a trailing backslash, the closing quote can be
+# swallowed and subsequent arguments (like -Arch) get appended to the project
+# path. Detect this pattern and recover the real values so GetFullPath doesn't
+# choke on the unexpected characters.
+if ($proj -match '^(?<dir>.+?)\s+-Arch\s+(?<arch>.+)$') {
+  $proj = $Matches.dir
+  if (-not $PSBoundParameters.ContainsKey('Arch')) {
+    $Arch = $Matches.arch.Trim('"')
+  }
+}
 # Sanitize path in case MSBuild passed a trailing backslash before the closing quote
 $proj = $proj.Trim('"')
 $proj = [System.IO.Path]::GetFullPath($proj)
