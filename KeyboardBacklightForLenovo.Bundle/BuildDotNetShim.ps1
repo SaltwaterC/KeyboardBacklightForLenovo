@@ -1,5 +1,6 @@
 param(
-  [string]$ProjectDir
+  [string]$ProjectDir,
+  [string]$Arch
 )
 
 $ErrorActionPreference = 'Stop'
@@ -30,10 +31,15 @@ $proj = if ($ProjectDir) { $ProjectDir } else { $PSScriptRoot }
 $proj = $proj.Trim('"')
 $proj = [System.IO.Path]::GetFullPath($proj)
 
+if (-not $Arch) { throw 'Arch parameter is required' }
+
 $src = [System.IO.Path]::Combine($proj, 'InstallDotNetDesktopRuntime.ps1')
 $dstDir = [System.IO.Path]::Combine($proj, 'External')
 if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }
-$dst = [System.IO.Path]::Combine($dstDir, 'InstallDotNetDesktopRuntime.exe')
+$dst = [System.IO.Path]::Combine($dstDir, "InstallDotNetDesktopRuntime-$Arch.exe")
 
 Ensure-Ps2Exe
 Compile-Shim -In $src -Out $dst
+
+$verify = [System.IO.Path]::Combine((Split-Path $proj -Parent), 'VerifyArch.ps1')
+& $verify -Expected $Arch -Exe $dst
