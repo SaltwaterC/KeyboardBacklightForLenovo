@@ -33,7 +33,7 @@
     <Chain>
       <!-- .NET 8 Windows Desktop Runtime shim: downloads & installs latest 8.0 securely -->
       <ExePackage Id="DotNetDesktopRuntimeShim"
-                  SourceFile="External\\InstallDotNetDesktopRuntime.exe"
+                  SourceFile="External\\InstallDotNetDesktopRuntime-$(Platform).exe"
                   Permanent="yes"
                   Vital="yes">
         <?if $(var.Platform) = x64 ?>

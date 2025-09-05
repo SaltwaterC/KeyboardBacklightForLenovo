@@ -16,4 +16,8 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.EventLog" Version="8.0.0" />
   </ItemGroup>
+  <Target Name="VerifyExeArch" AfterTargets="Build">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)VerifyArch.ps1&quot; -Expected &quot;$(Platform)&quot; -Exe &quot;$(TargetPath)&quot;" />
+  </Target>
 </Project>
+

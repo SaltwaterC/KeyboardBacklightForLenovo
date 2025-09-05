@@ -26,4 +26,8 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.7" />
     <PackageReference Include="System.Management" Version="9.0.8" />
   </ItemGroup>
+  <Target Name="VerifyExeArch" AfterTargets="Build">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)VerifyArch.ps1&quot; -Expected &quot;$(Platform)&quot; -Exe &quot;$(TargetPath)&quot;" />
+  </Target>
 </Project>
+
