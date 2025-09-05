@@ -65,3 +65,6 @@ Compile-Shim -In $src -Out $dst -Arch $Arch
 
 $verify = [System.IO.Path]::Combine((Split-Path $proj -Parent), 'VerifyArch.ps1')
 & $verify -Expected $Arch -Exe $dst
+
+# Ensure deterministic success code for MSBuild integration
+exit 0
