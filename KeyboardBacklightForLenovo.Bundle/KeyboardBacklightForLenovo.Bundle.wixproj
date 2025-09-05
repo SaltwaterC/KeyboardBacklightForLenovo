@@ -23,13 +23,13 @@
   <!-- No build-time versioning; shim resolves latest LTS at install time. -->
   <Target Name="BuildDotNetShim" BeforeTargets="PrepareForBuild">
     <Message Text="Building .NET Desktop Runtime shim..." Importance="high" />
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)\BuildDotNetShim.ps1&quot; -ProjectDir &quot;$(MSBuildThisFileDirectory)&quot;" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)\BuildDotNetShim.ps1&quot; -ProjectDir &quot;$(MSBuildThisFileDirectory).&quot; -Arch &quot;$(Platform)&quot;" />
   </Target>
   <ItemGroup>
     <Content Include="External\ScreenStateService-$(Platform).msi">
       <Pack>false</Pack>
     </Content>
-    <Content Include="External\InstallDotNetDesktopRuntime.exe">
+    <Content Include="External\InstallDotNetDesktopRuntime-$(Platform).exe">
       <Pack>false</Pack>
     </Content>
   </ItemGroup>
@@ -37,4 +37,7 @@
     <None Include="BuildDotNetShim.ps1" />
     <None Include="InstallDotNetDesktopRuntime.ps1" />
   </ItemGroup>
+  <Target Name="VerifyBundleArch" AfterTargets="Build">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)VerifyArch.ps1&quot; -Expected &quot;$(Platform)&quot; -Exe &quot;$(TargetPath)&quot;" />
+  </Target>
 </Project>
