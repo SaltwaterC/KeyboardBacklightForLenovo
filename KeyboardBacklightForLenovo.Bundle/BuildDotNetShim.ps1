@@ -1,5 +1,6 @@
 param(
   [string]$ProjectDir,
+  [ValidateSet('x86','x64')]
   [string]$Arch
 )
 
@@ -18,12 +19,33 @@ function Ensure-Ps2Exe {
 }
 
 function Compile-Shim {
-  param([string]$In, [string]$Out)
-  Write-Host "[build-shim] Compiling shim: $In -> $Out"
+  param(
+    [string]$In,
+    [string]$Out,
+    [string]$Arch
+  )
+  Write-Host "[build-shim] Compiling shim: $In -> $Out ($Arch)"
   # Import module in current session
   Import-Module ps2exe -ErrorAction Stop
-  if (-not (Test-Path (Split-Path $Out -Parent))) { New-Item -ItemType Directory -Path (Split-Path $Out -Parent) -Force | Out-Null }
-  Invoke-ps2exe -inputFile $In -outputFile $Out -noConsole -iconFile $null -Title 'Install .NET Desktop Runtime' -version '1.0.0'
+  if (-not (Test-Path (Split-Path $Out -Parent))) {
+    New-Item -ItemType Directory -Path (Split-Path $Out -Parent) -Force | Out-Null
+  }
+
+  $ps2args = @{
+    inputFile  = $In
+    outputFile = $Out
+    noConsole  = $true
+    title      = 'Install .NET Desktop Runtime'
+    version    = '1.0.0'
+  }
+
+  switch ($Arch.ToLowerInvariant()) {
+    'x64' { $ps2args.x64 = $true }
+    'x86' { $ps2args.x86 = $true }
+    default { throw "Unsupported arch: $Arch" }
+  }
+
+  Invoke-ps2exe @ps2args
 }
 
 $proj = if ($ProjectDir) { $ProjectDir } else { $PSScriptRoot }
@@ -39,7 +61,7 @@ if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Forc
 $dst = [System.IO.Path]::Combine($dstDir, "InstallDotNetDesktopRuntime-$Arch.exe")
 
 Ensure-Ps2Exe
-Compile-Shim -In $src -Out $dst
+Compile-Shim -In $src -Out $dst -Arch $Arch
 
 $verify = [System.IO.Path]::Combine((Split-Path $proj -Parent), 'VerifyArch.ps1')
 & $verify -Expected $Arch -Exe $dst
