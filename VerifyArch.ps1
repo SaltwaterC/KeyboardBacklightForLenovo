@@ -4,10 +4,10 @@ param(
   [string]$Msi              # optional: MSI to validate
 )
 
-function Normalize-Platform([string]$p){
+function Normalize-Platform([string]$p) {
   switch ($p.Trim().ToUpperInvariant()) {
-    'X64'   { 'x64' }
-    'X86'   { 'x86' }
+    'X64' { 'x64' }
+    'X86' { 'x86' }
     'ARM64' { 'arm64' }
     'ANY CPU' { 'anycpu' }
     default { $p.ToLowerInvariant() }
@@ -29,7 +29,8 @@ function Get-ExeArch([string]$path) {
       0xAA64 { 'arm64' }
       default { "unknown(0x{0:X})" -f $machine }
     }
-  } finally { $fs.Dispose() }
+  }
+  finally { $fs.Dispose() }
 }
 
 function Get-MsiArch([string]$path) {
@@ -38,12 +39,14 @@ function Get-MsiArch([string]$path) {
     $sum = $installer.SummaryInformation($path, 0)
     try {
       $template = $sum.Property(7)  # PID_TEMPLATE
-      if     ($template -match '^x64')   { 'x64' }
+      if ($template -match '^x64') { 'x64' }
       elseif ($template -match '^Intel') { 'x86' }
       elseif ($template -match '^Arm64') { 'arm64' }
       else { 'unknown' }
-    } finally { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($sum) }
-  } finally { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($installer) }
+    }
+    finally { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($sum) }
+  }
+  finally { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($installer) }
 }
 
 $expected = Normalize-Platform $Expected
@@ -53,7 +56,8 @@ if ($Exe) {
   if ($expected -ne 'anycpu' -and $exeArch -ne $expected) {
     Write-Error "ARCH MISMATCH: EXE '$Exe' is '$exeArch' but expected '$expected'"
     exit 1
-  } else { Write-Host "OK: EXE '$Exe' is '$exeArch' (expected '$expected')" }
+  }
+  else { Write-Host "OK: EXE '$Exe' is '$exeArch' (expected '$expected')" }
 }
 
 if ($Msi) {
@@ -61,5 +65,6 @@ if ($Msi) {
   if ($msiArch -ne $expected) {
     Write-Error "ARCH MISMATCH: MSI '$Msi' is '$msiArch' but expected '$expected'"
     exit 1
-  } else { Write-Host "OK: MSI '$Msi' is '$msiArch' (expected '$expected')" }
+  }
+  else { Write-Host "OK: MSI '$Msi' is '$msiArch' (expected '$expected')" }
 }

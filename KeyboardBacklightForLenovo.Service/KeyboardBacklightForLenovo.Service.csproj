@@ -1,4 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Variables.props" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,11 +7,9 @@
     <AssemblyName>BacklightResetService</AssemblyName>
     <Description>Reset keyboard backlight to set value on boot or when resuming from sleep/hibernate when no user is logged on.</Description>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\KeyboardBacklightForLenovo.Core\KeyboardBacklightForLenovo.Core.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
@@ -20,4 +19,3 @@
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)VerifyArch.ps1&quot; -Expected &quot;$(Platform)&quot; -Exe &quot;$(TargetPath)&quot;" />
   </Target>
 </Project>
-
