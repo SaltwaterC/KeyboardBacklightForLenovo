@@ -1,4 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Variables.props" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,13 +7,10 @@
     <AssemblyName>keyboard-backlight</AssemblyName>
     <Description>Keyboard Backlight for Lenovo CLI</Description>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\KeyboardBacklightForLenovo.Core\KeyboardBacklightForLenovo.Core.csproj" />
   </ItemGroup>
-
   <Target Name="VerifyExeArch" AfterTargets="Build">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)VerifyArch.ps1&quot; -Expected &quot;$(Platform)&quot; -Exe &quot;$(TargetPath)&quot;" />
   </Target>
 </Project>
-

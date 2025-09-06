@@ -1,0 +1,8 @@
+#!/bin/sh
+if command -v pwsh >/dev/null 2>&1; then
+  SHELL=pwsh
+else
+  SHELL=powershell
+fi
+$SHELL -NoProfile -ExecutionPolicy Bypass -File "$(git rev-parse --show-toplevel)/format.ps1"
+git add -u

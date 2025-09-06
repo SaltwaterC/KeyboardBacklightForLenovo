@@ -1,3 +1,4 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Variables.props" />
   <PropertyGroup>
@@ -7,7 +8,6 @@
     <AssemblyName>tray-close</AssemblyName>
     <Description>Helper to close Backlight Tray via WM_CLOSE</Description>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\KeyboardBacklightForLenovo.Core\KeyboardBacklightForLenovo.Core.csproj" />
   </ItemGroup>
@@ -15,4 +15,3 @@
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)VerifyArch.ps1&quot; -Expected &quot;$(Platform)&quot; -Exe &quot;$(TargetPath)&quot;" />
   </Target>
 </Project>
-

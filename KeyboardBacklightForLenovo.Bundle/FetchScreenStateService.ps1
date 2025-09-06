@@ -2,7 +2,7 @@ param(
   [string]$Owner = 'SaltwaterC',
   [string]$Repo = 'ScreenStateService',
   [string]$OutDir = $(Join-Path $PSScriptRoot 'External'),
-  [ValidateSet('x64','x86')]
+  [ValidateSet('x64', 'x86')]
   [string]$Arch = 'x64'
 )
 

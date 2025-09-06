@@ -2,7 +2,7 @@ param(
   [string]$Project = '..\Variables.props',
   [string]$Out = 'GeneratedVariables.wxi',
   # MSBuild properties to read (order is preserved in output)
-  [string[]]$Properties = @('ProductVersion','Company','RootNamespace','Product'),
+  [string[]]$Properties = @('ProductVersion', 'Company', 'RootNamespace', 'Product'),
   # Optional mapping: MSBuildPropertyName -> WixDefineName
   [hashtable]$DefineMap = @{}
 )
@@ -15,7 +15,8 @@ $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { [System.IO.Path]::GetDi
 # Resolve csproj path
 if (-not [System.IO.Path]::IsPathRooted($Project)) {
   $projPath = [System.IO.Path]::GetFullPath((Join-Path $scriptDir $Project))
-} else {
+}
+else {
   $projPath = $Project
 }
 if (-not (Test-Path -LiteralPath $projPath)) {
@@ -25,7 +26,8 @@ if (-not (Test-Path -LiteralPath $projPath)) {
 # Resolve output path
 if (-not [System.IO.Path]::IsPathRooted($Out)) {
   $outPath = [System.IO.Path]::GetFullPath((Join-Path $scriptDir $Out))
-} else {
+}
+else {
   $outPath = $Out
 }
 
@@ -63,7 +65,7 @@ foreach ($propName in $Properties) {
 
   # Escape XML special chars
   $raw = [string]$values[$propName]
-  $escaped = $raw.Replace('&','&amp;').Replace('<','&lt;').Replace('>','&gt;').Replace('"','&quot;').Replace("'","&apos;")
+  $escaped = $raw.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;').Replace("'", "&apos;")
 
   [void]$sb.AppendLine("  <?define $defineName=""$escaped"" ?>")
 }

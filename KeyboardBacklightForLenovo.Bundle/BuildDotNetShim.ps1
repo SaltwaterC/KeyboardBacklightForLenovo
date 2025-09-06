@@ -1,6 +1,6 @@
 param(
   [string]$ProjectDir,
-  [ValidateSet('x86','x64')]
+  [ValidateSet('x86', 'x64')]
   [string]$Arch
 )
 

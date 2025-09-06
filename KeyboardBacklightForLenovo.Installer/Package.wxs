@@ -1,29 +1,15 @@
-﻿<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
-     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
-
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
   <?include "GeneratedVariables.wxi" ?>
   <?include "GeneratedVariablesService.wxi" ?>
   <?include "GeneratedVariablesCli.wxi" ?>
   <?include "GeneratedVariablesTray.wxi" ?>
   <?include "GeneratedVariablesTrayClose.wxi" ?>
-
-  <Package
-    Id="$(var.Company).$(var.RootNamespace).Installer"
-    Name="$(var.RootNamespace)"
-    Version="$(var.ProductVersion)"
-    Manufacturer="$(var.Company)"
-    UpgradeCode="a24ecd45-92ce-4b3e-947e-fb1ec414b025"
-    Language="1033"
-	  InstallerVersion="500"
-	  Compressed="yes"
-	  Scope="perMachine">
-
+  <Package Id="$(var.Company).$(var.RootNamespace).Installer" Name="$(var.RootNamespace)" Version="$(var.ProductVersion)" Manufacturer="$(var.Company)" UpgradeCode="a24ecd45-92ce-4b3e-947e-fb1ec414b025" Language="1033" InstallerVersion="500" Compressed="yes" Scope="perMachine">
     <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
-
     <Feature Id="ProductFeature" Title="$(var.Product)" Level="1">
       <ComponentRef Id="InstallFolderPerms" />
-      <ComponentRef Id ="DriversConfig" />
+      <ComponentRef Id="DriversConfig" />
       <ComponentRef Id="ServiceExe" />
       <ComponentRef Id="EventLogSource" />
       <ComponentRef Id="CliExe" />
@@ -33,203 +19,103 @@
       <ComponentRef Id="TrayRunAtLogon" />
       <ComponentRef Id="TrayCloseExe" />
     </Feature>
-
     <ui:WixUI Id="WixUI_Mondo" />
     <WixVariable Id="WixUILicenseRtf" Value="LICENSE.rtf" />
-
     <Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
-
     <InstallExecuteSequence>
       <!-- Request reboot at the end of install if upgrading -->
       <ScheduleReboot After="InstallFinalize" Condition="UPGRADINGPRODUCTCODE" />
       <!-- Attempt to close the tray app using the CLI at the start of uninstall -->
       <Custom Action="CloseTrayOnUninstall" After="CostFinalize" Condition="Installed AND NOT UPGRADINGPRODUCTCODE AND (&amp;ProductFeature=2 OR REMOVE~=&quot;ALL&quot;)" />
     </InstallExecuteSequence>
-
     <!-- UI sequence: launch Tray unelevated after ExecuteAction when installing -->
     <InstallUISequence>
       <Custom Action="LaunchTrayExe" After="ExecuteAction" Condition="NOT Installed" />
     </InstallUISequence>
-
     <Property Id="DOTNET4X_FULLPATH" Secure="yes">
-      <RegistrySearch
-				Root="HKLM"
-				Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
-				Name="InstallPath"
-				Type="raw" />
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full" Name="InstallPath" Type="raw" />
     </Property>
   </Package>
-
   <Fragment>
     <StandardDirectory Id="ProgramFiles6432Folder">
       <Directory Id="INSTALLFOLDER" Name="$(var.RootNamespace)" />
     </StandardDirectory>
   </Fragment>
-
   <!-- Immediate EXE CA to launch tray under user context (UI sequence) -->
   <Fragment>
-    <CustomAction Id="LaunchTrayExe"
-                  FileRef="TrayFile"
-                  ExeCommand=""
-                  Execute="immediate"
-                  Return="asyncNoWait" />
+    <CustomAction Id="LaunchTrayExe" FileRef="TrayFile" ExeCommand="" Execute="immediate" Return="asyncNoWait" />
   </Fragment>
-
   <Fragment>
-    <CustomAction Id="CloseTrayOnUninstall"
-                  FileRef="TrayCloseFile"
-                  ExeCommand=""
-                  Execute="immediate"
-                  Return="ignore"/>
+    <CustomAction Id="CloseTrayOnUninstall" FileRef="TrayCloseFile" ExeCommand="" Execute="immediate" Return="ignore" />
   </Fragment>
-
   <Fragment>
     <StandardDirectory Id="ProgramMenuFolder">
       <Component Id="TrayProgramMenuShortcut" Guid="6f7a5f19-2e8b-4c54-bb1b-2d8c89f2a3d1">
-        <RegistryValue Root="HKCU"
-                       Key="Software\$(var.Company)\$(var.RootNamespace)"
-                       Name="ProgramMenuShortcut"
-                       Value="1"
-                       Type="string"
-                       KeyPath="yes" />
-        <Shortcut Id="TrayProgramMenuLnk"
-                  Directory="ProgramMenuFolder"
-                  Name="$(var.Product) Tray"
-                  Target="[INSTALLFOLDER]$(var.TrayAssemblyName).exe"
-                  WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\$(var.Company)\$(var.RootNamespace)" Name="ProgramMenuShortcut" Value="1" Type="string" KeyPath="yes" />
+        <Shortcut Id="TrayProgramMenuLnk" Directory="ProgramMenuFolder" Name="$(var.Product) Tray" Target="[INSTALLFOLDER]$(var.TrayAssemblyName).exe" WorkingDirectory="INSTALLFOLDER" />
       </Component>
     </StandardDirectory>
   </Fragment>
-
   <Fragment>
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="DriversConfig" Guid="aa2d9581-811d-413b-a975-30a65cb183f8">
         <File Id="DriverConfig.json" Source="$(SolutionDir)bin\$(Platform)\Publish\DriversConfig.json" />
-      </Component >
+      </Component>
     </DirectoryRef>
   </Fragment>
-
   <Fragment>
     <DirectoryRef Id="INSTALLFOLDER">
-
       <!-- Ensure folder exists and grant LocalService RX on the folder -->
       <Component Id="InstallFolderPerms" Guid="c27b41ae-834b-457b-ab5b-6d7fb313fef3">
         <CreateFolder>
-          <util:PermissionEx
-					  User="NT AUTHORITY\LocalService"
-					  GenericRead="yes"
-					  GenericExecute="yes" />
+          <util:PermissionEx User="NT AUTHORITY\LocalService" GenericRead="yes" GenericExecute="yes" />
         </CreateFolder>
       </Component>
-
       <!-- Main service executable -->
       <Component Id="ServiceExe" Guid="4ff08087-fe1d-4f8a-9fc3-8986d11afc98">
-        <File Id="SvcExe"
-                  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.ServiceAssemblyName).exe"
-                  KeyPath="yes">
+        <File Id="SvcExe" Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.ServiceAssemblyName).exe" KeyPath="yes">
           <!-- Explicit RX on the file in case inheritance is blocked -->
-          <util:PermissionEx
-					  User="NT AUTHORITY\LocalService"
-					  GenericRead="yes"
-					  GenericExecute="yes" />
+          <util:PermissionEx User="NT AUTHORITY\LocalService" GenericRead="yes" GenericExecute="yes" />
         </File>
-
         <!-- Windows service -->
-        <ServiceInstall
-				  Id="ServiceInstaller"
-				  Type="ownProcess"
-				  Name="$(var.ServiceAssemblyName)"
-				  DisplayName="$(var.ServiceAssemblyName)"
-				  Description="$(var.ServiceDescription)"
-				  Start="auto"
-				  Account="NT AUTHORITY\LocalService"
-				  ErrorControl="normal"
-				  Vital="yes">
-
+        <ServiceInstall Id="ServiceInstaller" Type="ownProcess" Name="$(var.ServiceAssemblyName)" DisplayName="$(var.ServiceAssemblyName)" Description="$(var.ServiceDescription)" Start="auto" Account="NT AUTHORITY\LocalService" ErrorControl="normal" Vital="yes">
           <!-- Core service config (WiX built-in) -->
-          <ServiceConfig
-					  ServiceSid="1"
-					  OnInstall="yes"
-					  OnReinstall="yes"
-					  OnUninstall="no" />
-
+          <ServiceConfig ServiceSid="1" OnInstall="yes" OnReinstall="yes" OnUninstall="no" />
           <!-- Failure actions -->
-          <util:ServiceConfig
-					  FirstFailureActionType="restart"
-					  SecondFailureActionType="restart"
-					  ThirdFailureActionType="none"
-					  RestartServiceDelayInSeconds="60"
-					  ResetPeriodInDays="1" />
+          <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="none" RestartServiceDelayInSeconds="60" ResetPeriodInDays="1" />
         </ServiceInstall>
-
-        <ServiceControl
-                  Id="ServiceControl"
-                  Name="$(var.ServiceAssemblyName)"
-                  Start="install"
-                  Stop="both"
-                  Remove="both"
-                  Wait="yes" />
+        <ServiceControl Id="ServiceControl" Name="$(var.ServiceAssemblyName)" Start="install" Stop="both" Remove="both" Wait="yes" />
       </Component>
-
       <!-- CLI executable -->
       <Component Id="CliExe" Guid="b18d3d8a-1c2f-4b8a-9f4b-9d2d3a1f4e21">
-        <File Id="CliFile"
-                  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.CliAssemblyName).exe"
-                  KeyPath="yes" />
+        <File Id="CliFile" Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.CliAssemblyName).exe" KeyPath="yes" />
       </Component>
-
       <!-- Tray executable -->
       <Component Id="TrayExe" Guid="2a5b7f06-3c6c-4c3f-8c9a-8da1a8b8b3ad">
-        <File Id="TrayFile"
-                  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.TrayAssemblyName).exe"
-                  KeyPath="yes" />
+        <File Id="TrayFile" Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.TrayAssemblyName).exe" KeyPath="yes" />
       </Component>
-
       <!-- Tray close helper (WinExe, no console window) -->
       <Component Id="TrayCloseExe" Guid="d7c2a5a8-7f49-4f8f-8db9-4a5e61b8c2e1">
-        <File Id="TrayCloseFile"
-                  Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.TrayCloseAssemblyName).exe"
-                  KeyPath="yes" />
+        <File Id="TrayCloseFile" Source="$(SolutionDir)\bin\$(Platform)\Publish\$(var.TrayCloseAssemblyName).exe" KeyPath="yes" />
       </Component>
-
       <!-- Auto-start Tray at user logon for all users via HKLM Run -->
       <Component Id="TrayRunAtLogon" Guid="7a2f4b1a-1b13-4a57-9e34-e2d7d1d9b9a3">
-        <RegistryValue
-            Root="HKLM"
-            Key="Software\Microsoft\Windows\CurrentVersion\Run"
-            Name="$(var.TrayAssemblyName)"
-            Value="&quot;[INSTALLFOLDER]$(var.TrayAssemblyName).exe&quot;"
-            Type="string"
-            KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="$(var.TrayAssemblyName)" Value="&quot;[INSTALLFOLDER]$(var.TrayAssemblyName).exe&quot;" Type="string" KeyPath="yes" />
       </Component>
     </DirectoryRef>
   </Fragment>
-
   <Fragment>
     <StandardDirectory Id="StartupFolder">
       <Component Id="TrayStartupShortcut" Guid="8a1c1b5d-6b7e-4f1a-9a52-e4a8d6b3c2f1">
         <!-- Per-user KeyPath required for shortcuts in user profile (fixes ICE38/ICE43/ICE57) -->
-        <RegistryValue Root="HKCU"
-                       Key="Software\$(var.Company)\$(var.RootNamespace)"
-                       Name="StartupShortcut"
-                       Value="1"
-                       Type="string"
-                       KeyPath="yes" />
-        <Shortcut Id="TrayStartupLnk"
-                  Directory="StartupFolder"
-                  Name="$(var.Product)"
-                  Target="[INSTALLFOLDER]$(var.TrayAssemblyName).exe"
-                  WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\$(var.Company)\$(var.RootNamespace)" Name="StartupShortcut" Value="1" Type="string" KeyPath="yes" />
+        <Shortcut Id="TrayStartupLnk" Directory="StartupFolder" Name="$(var.Product)" Target="[INSTALLFOLDER]$(var.TrayAssemblyName).exe" WorkingDirectory="INSTALLFOLDER" />
       </Component>
     </StandardDirectory>
   </Fragment>
-
   <Fragment>
     <Component Id="EventLogSource" Guid="92f8cb1f-0cf4-4949-be20-b44d973ac41e">
-      <util:EventSource
-				Name="$(var.ServiceAssemblyName)"
-				Log="Application"
-				EventMessageFile="[DOTNET4X_FULLPATH]EventLogMessages.dll" />
+      <util:EventSource Name="$(var.ServiceAssemblyName)" Log="Application" EventMessageFile="[DOTNET4X_FULLPATH]EventLogMessages.dll" />
     </Component>
   </Fragment>
 </Wix>
