@@ -12,6 +12,26 @@ The tray application has an Auto mode: a set mode for day and a set mode for nig
 
 The auto mode suspends persistence: the keyboard backlight is set to the day or night level on transition, and user changes are ignored until the next transition. Manual override is still possible, but the backlight status shall be reset to the value set for day or night mode upon encountering a power event.
 
+## Installing
+
+Fetch a release bundle and run. The bundle has 3 components:
+
+- .NET desktop runtime installer needed to run this software. This only runs when the latest 8.0 is not installed.
+- [ScreenStateService](https://github.com/SaltwaterC/ScreenStateService) to detect power events when laptop screen turns on.
+- The collection of software from this project.
+
+## Uninstalling
+
+- Run the uninstaller from Settings » Apps.
+- Optional: Uninstall ScreenStateService from Settings » Apps (if you don't plan to reinstall and you don't use it for something else).
+- Optional: Uninstall .NET desktop runtime if not needed anymore. Note that other software may be using this.
+
+If .NET does not show up in Settings » Apps, run this from command prompt (Win+R » cmd.exe):
+
+```sh
+winget uninstall --id Microsoft.DotNet.DesktopRuntime.8
+```
+
 ## Under the bonnet
 
 This uses ACPI (Advanced Configuration and Power Interface) principals exposed by Lenovo's drivers to get and set backlight level:
@@ -32,15 +52,3 @@ Tested on the following laptops:
 
 [@gonwan](https://github.com/gonwan) for [figuring out EnergyDrv](https://www.gonwan.com/2025/04/11/keyboard-backlight-control-on-lenovo-ideapad-xiaoxin-models/).\
 [@Maclay74](https://github.com/Maclay74) for [figuring out NightLight](https://github.com/Maclay74/tiny-screen/blob/main/TinyScreen/Src/Services/NightLight.cs).
-
-## Formatting
-
-Run `pwsh ./format.ps1` to apply repository code style and CRLF line endings across C#, XML, and PowerShell files.
-
-To enable automatic enforcement, configure Git to use the bundled pre-commit hook:
-
-```sh
-git config core.hooksPath .githooks
-```
-
-The hook runs the formatter before each commit and stages any resulting changes.
