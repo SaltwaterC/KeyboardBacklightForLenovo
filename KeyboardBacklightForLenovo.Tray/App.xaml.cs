@@ -24,7 +24,7 @@ namespace KeyboardBacklightForLenovo
     private WinForms.ToolStripMenuItem _autoItem = null!;
 
     // Core pieces
-    private readonly KeyboardBacklightController _controller = new();
+    private KeyboardBacklightController _controller = null!;
     private PowerEventsWatcher? _powerWatcher;
 
     // Track last seen hardware state
@@ -97,6 +97,23 @@ namespace KeyboardBacklightForLenovo
       }
 
       base.OnStartup(e);
+
+      try
+      {
+        _controller = new KeyboardBacklightController();
+      }
+      catch (InvalidOperationException ex)
+      {
+        ShowDriverMissingDialog(ex);
+        Shutdown();
+        return;
+      }
+      catch (Exception ex)
+      {
+        ShowDriverMissingDialog(ex);
+        Shutdown();
+        return;
+      }
 
       // Create a hidden window to receive Restart Manager shutdown messages (WM_QUERYENDSESSION/WM_ENDSESSION)
       InitializeRestartManagerSink();
@@ -231,6 +248,17 @@ namespace KeyboardBacklightForLenovo
 
       // Hide template window if present
       Current.MainWindow?.Hide();
+    }
+
+    private static void ShowDriverMissingDialog(Exception ex)
+    {
+      const string caption = "Keyboard Backlight Controller";
+      string message =
+          "Keyboard Backlight Controller for Lenovo could not find a supported driver backend (EnergyDrv or IBMPmDrv).\n" +
+          "The tray application will exit.\n\n" +
+          "Details: " + ex.Message;
+
+      MessageBox.Show(message, caption, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private void UpdateAutoMenuText()
