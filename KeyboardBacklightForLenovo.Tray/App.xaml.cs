@@ -258,7 +258,7 @@ namespace KeyboardBacklightForLenovo
           "The tray application will exit.\n\n" +
           "Details: " + ex.Message;
 
-      MessageBox.Show(message, caption, MessageBoxButton.OK, MessageBoxImage.Error);
+      System.Windows.MessageBox.Show(message, caption, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private void UpdateAutoMenuText()
