@@ -32,6 +32,8 @@ namespace KeyboardBacklightForLenovo
 
     public bool AutoEnabled { get; set; } = false;
 
+    public bool NightLightDebugLogging { get; set; } = false;
+
     public (TimeSpan NightStart, TimeSpan NightEnd) GetNightInterval()
         => (DayEnd, DayStart);
   }

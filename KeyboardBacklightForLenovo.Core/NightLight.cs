@@ -25,6 +25,7 @@ SOFTWARE.
 
 using Microsoft.Win32;
 using Microsoft.Win32.SafeHandles;
+using System;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Threading;
@@ -40,6 +41,7 @@ namespace KeyboardBacklightForLenovo
     "Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\Store\\DefaultAccount\\Current\\default$windows.data.bluelightreduction.bluelightreductionstate\\windows.data.bluelightreduction.bluelightreductionstate";
 
     private readonly RegistryKey? _registryKey;
+    private readonly Action<string>? _log;
 
     // Registry watcher state
     private Thread? _watchThread;
@@ -73,9 +75,11 @@ namespace KeyboardBacklightForLenovo
       }
     }
 
-    public NightLight()
+    public NightLight(Action<string>? log = null)
     {
+      _log = log;
       _registryKey = Registry.CurrentUser.OpenSubKey(_key, false);
+      Log($"Constructed NightLight. KeyFound={_registryKey is not null}");
     }
 
     ~NightLight()
@@ -101,6 +105,7 @@ namespace KeyboardBacklightForLenovo
       if (_registryKey is null) return; // unsupported
 
       StopWatching(); // idempotent
+      Log("StartWatching invoked.");
 
       try
       {
@@ -115,6 +120,7 @@ namespace KeyboardBacklightForLenovo
         if (rk is null)
         {
           // Key disappeared; nothing to watch
+          Log("StartWatching: registry key vanished when opening with notify rights.");
           return;
         }
 
@@ -123,6 +129,7 @@ namespace KeyboardBacklightForLenovo
           using (rk)
           {
             var handle = rk.Handle;
+            Log("Registry watcher thread running.");
             while (!token.IsCancellationRequested)
             {
               int hr = RegNotifyChangeKeyValue(
@@ -132,17 +139,28 @@ namespace KeyboardBacklightForLenovo
                 hEvent: IntPtr.Zero,
                 fAsynchronous: false);
 
-              if (token.IsCancellationRequested || hr != 0)
+              if (token.IsCancellationRequested)
+              {
+                Log("Registry watcher cancelling due to token.");
                 break;
+              }
+
+              if (hr != 0)
+              {
+                Log($"Registry watcher exiting due to error code {hr}.");
+                break;
+              }
 
               try
               {
                 // Debounce multiple writes per toggle
                 Thread.Sleep(50);
+                Log("Night light change detected.");
                 Changed?.Invoke(this, EventArgs.Empty);
               }
               catch { /* ignore */ }
             }
+            Log("Registry watcher thread exiting.");
           }
         })
         { IsBackground = true, Name = "NightLightRegistryWatcher" };
@@ -166,7 +184,13 @@ namespace KeyboardBacklightForLenovo
         _watchCts = null;
         _watchThread = null;
       }
+
+      Log("StopWatching completed.");
     }
 
+    private void Log(string message)
+    {
+      try { _log?.Invoke(message); } catch { }
+    }
   }
 }

@@ -7,9 +7,11 @@
       <RowDefinition Height="Auto" />
       <RowDefinition Height="8" />
       <RowDefinition Height="Auto" />
+      <RowDefinition Height="12" />
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="8" />
       <RowDefinition Height="Auto" />
-      <RowDefinition Height="12" />
+      <RowDefinition Height="8" />
       <RowDefinition Height="Auto" />
       <!-- buttons -->
     </Grid.RowDefinitions>
@@ -55,8 +57,14 @@
         <TextBlock Grid.Column="6" x:Name="lblNightSpan" VerticalAlignment="Center" />
       </Grid>
     </GroupBox>
+    <!-- Diagnostics -->
+    <GroupBox Header="Diagnostics" Grid.Row="8">
+      <StackPanel>
+        <CheckBox x:Name="chkNightLightLogging" Content="Enable Night light debug logging" />
+      </StackPanel>
+    </GroupBox>
     <!-- Buttons -->
-    <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right">
+    <StackPanel Grid.Row="10" Orientation="Horizontal" HorizontalAlignment="Right">
       <Button Content="OK" Width="90" Margin="0,0,8,0" Click="OnOkClick" />
       <Button Content="Cancel" Width="90" IsCancel="True" />
     </StackPanel>

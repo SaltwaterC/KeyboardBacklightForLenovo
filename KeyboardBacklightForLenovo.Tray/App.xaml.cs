@@ -66,7 +66,7 @@ namespace KeyboardBacklightForLenovo
     private readonly TimeSpan _burstInterval = TimeSpan.FromMilliseconds(120);
 
     // Night light + settings
-    private readonly NightLight _nightLight = new NightLight();
+    private NightLight _nightLight;
     private TraySettings _settings = TraySettingsStore.LoadOrDefaults();
 
     // Auto engine
@@ -83,6 +83,11 @@ namespace KeyboardBacklightForLenovo
     private HwndSource? _rmSource;         // native popup sink (eligible as main window without taskbar)
     private IntPtr _rmHwnd;                // handle of native sink
     private bool _rmExitInitiated; // ensure shutdown path runs once
+
+    public App()
+    {
+      _nightLight = CreateNightLightInstance();
+    }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -171,20 +176,21 @@ namespace KeyboardBacklightForLenovo
       _notifyIcon.ContextMenuStrip = menu;
 
       // Night light registry watcher
-      _nightLight.Changed += OnNightLightChanged;
-      _nightLight.StartWatching();
+      StartNightLightWatcher();
 
       // Auto-at-start behavior:
       if (AutoEnabled)
       {
         if (_settings.Mode == OperatingMode.NightLight)
         {
+          LogDebug("Auto startup in Night light mode.");
           // Resolve NL immediately; default to OFF if unknown
           bool nlActive = _nightLight.Enabled;
           int desired = nlActive ? _settings.NightLevel : _settings.DayLevel;
           if (desired != PreferredLevelStore.ReadPreferredLevel())
             PreferredLevelStore.SavePreferredLevel(desired);
           _preferredCached = desired;
+          LogDebug($"Startup evaluation: nlActive={nlActive} desired={desired} day={_settings.DayLevel} night={_settings.NightLevel}");
 
           // Coalesced re-checks to capture any lagging registry state.
           KickAutoSoon("startup-nightlight", 300, 1500, 6000, 15000);
@@ -196,11 +202,13 @@ namespace KeyboardBacklightForLenovo
           if (desired != PreferredLevelStore.ReadPreferredLevel())
             PreferredLevelStore.SavePreferredLevel(desired);
           _preferredCached = desired;
+          LogDebug($"Startup evaluation (time-based) desired={desired}");
         }
       }
       else
       {
         _preferredCached = PreferredLevelStore.ReadPreferredLevel();
+        LogDebug($"Auto disabled at startup. PreferredCached={_preferredCached}");
       }
 
 
@@ -271,11 +279,22 @@ namespace KeyboardBacklightForLenovo
     {
       var wnd = new SettingsWindow(nightLightAvailable: _nightLight.Supported);
       wnd.ShowDialog();
+      LogDebug("Settings window closed; reloading settings.");
 
+      bool previousDebug = _settings.NightLightDebugLogging;
       _settings = TraySettingsStore.LoadOrDefaults();
+      LogDebug($"Settings reloaded via dialog. AutoEnabled={_settings.AutoEnabled} Mode={_settings.Mode} Day={_settings.DayLevel} Night={_settings.NightLevel}");
+
+      if (previousDebug != _settings.NightLightDebugLogging)
+      {
+        TrayLogger.Write(_settings.NightLightDebugLogging
+          ? "Night light debug logging enabled."
+          : "Night light debug logging disabled.");
+        RecreateNightLightWatcher();
+      }
 
       _autoItem.Checked = _settings.AutoEnabled;
-      UpdateAutoMenuText();             // <— ensure the “(Time based|Night light)” label updates
+      UpdateAutoMenuText();             // <- ensure the "(Time based|Night light)" label updates
 
       EvaluateAuto(applyHardware: true, reason: "settings-changed");
     }
@@ -329,6 +348,7 @@ namespace KeyboardBacklightForLenovo
       _settings = TraySettingsStore.LoadOrDefaults(); // refresh latest
       _settings.AutoEnabled = !_settings.AutoEnabled;
       TraySettingsStore.Save(_settings);
+      LogDebug($"ToggleAuto invoked. AutoEnabled={_settings.AutoEnabled} Mode={_settings.Mode} Day={_settings.DayLevel} Night={_settings.NightLevel}");
 
       _autoItem.Checked = _settings.AutoEnabled;
 
@@ -342,11 +362,17 @@ namespace KeyboardBacklightForLenovo
 
     private void OnNightLightChanged(object? sender, EventArgs e)
     {
+      LogDebug($"NightLight.Changed handler: AutoEnabled={_settings.AutoEnabled} Mode={_settings.Mode} NL.Enabled={SafeNightLightState()}");
       // Only care when Auto is enabled AND Night light mode is chosen.
       if (_settings.AutoEnabled && _settings.Mode == OperatingMode.NightLight)
       {
+        LogDebug("Night light change -> EvaluateAuto");
         // Re-evaluate immediately and apply to hardware so the keyboard switches with the screen tint
         EvaluateAuto(applyHardware: true, reason: "nightlight-registry-change");
+      }
+      else
+      {
+        LogDebug("Night light change ignored (auto disabled or wrong mode).");
       }
     }
 
@@ -489,11 +515,13 @@ namespace KeyboardBacklightForLenovo
       // Night light mode: do not defer; ComputeDesiredLevelByDayNight treats unknown as OFF.
 
       int desired = ComputeDesiredLevelByDayNight();
+      LogDebug($"EvaluateAuto reason={reason} desired={desired} currentPreferred={_preferredCached} applyHardware={applyHardware}");
       if (desired != _preferredCached)
       {
         PreferredLevelStore.SavePreferredLevel(desired);
         _preferredCached = desired;
         Debug.WriteLine($"[Auto] Persisted preferred={desired} ({reason})");
+        LogDebug($"Preferred level persisted as {desired} (reason={reason}).");
 
         if (applyHardware)
         {
@@ -503,12 +531,18 @@ namespace KeyboardBacklightForLenovo
             _lastLevel = desired;
             Dispatcher.Invoke(() => UpdateCheckedItemUIOnly(desired));
             Debug.WriteLine($"[Auto] Applied hardware level={desired} ({reason})");
+            LogDebug($"Applied hardware level={desired} (reason={reason}).");
           }
           catch (Exception ex)
           {
             Debug.WriteLine("[Auto] Apply failed: " + ex.Message);
+            LogDebug($"Failed to apply hardware level={desired}: {ex.Message}");
           }
         }
+      }
+      else
+      {
+        LogDebug($"EvaluateAuto no-op: desired equals preferred ({_preferredCached}).");
       }
     }
 
@@ -547,9 +581,48 @@ namespace KeyboardBacklightForLenovo
         bool en = _nightLight.Enabled;
         isNight = en;
         try { System.Diagnostics.Debug.WriteLine($"[Auto] NightLight.Enabled={en}"); } catch { }
+        LogDebug($"ComputeDesiredLevelByDayNight -> isNight={isNight} (NightLight.Enabled={en}) Day={s.DayLevel} Night={s.NightLevel}");
       }
 
       return isNight ? s.NightLevel : s.DayLevel;
+    }
+
+    private bool SafeNightLightState()
+    {
+      try { return _nightLight.Enabled; }
+      catch { return false; }
+    }
+
+    private NightLight CreateNightLightInstance()
+      => new NightLight(_settings.NightLightDebugLogging ? msg => LogDebug("NightLight " + msg) : null);
+
+    private void StartNightLightWatcher()
+    {
+      LogDebug("Starting Night light watcher.");
+      _nightLight.Changed += OnNightLightChanged;
+      _nightLight.StartWatching();
+      LogDebug($"Night light supported={_nightLight.Supported} state={SafeNightLightState()}");
+    }
+
+    private void RecreateNightLightWatcher()
+    {
+      try
+      {
+        _nightLight.Changed -= OnNightLightChanged;
+        _nightLight.StopWatching();
+      }
+      catch { /* ignore */ }
+
+      _nightLight = CreateNightLightInstance();
+      StartNightLightWatcher();
+    }
+
+    private void LogDebug(string message)
+    {
+      if (_settings?.NightLightDebugLogging == true)
+      {
+        try { TrayLogger.Write(message); } catch { }
+      }
     }
 
     // ===== Explicit user intent (tray menu) =====

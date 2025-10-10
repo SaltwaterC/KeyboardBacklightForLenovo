@@ -73,6 +73,8 @@ namespace KeyboardBacklightForLenovo
       grpTime.IsEnabled = timeBased;
       _dtStart.Enabled = timeBased;
       _dtEnd.Enabled = timeBased;
+
+      chkNightLightLogging.IsChecked = _model.NightLightDebugLogging;
     }
 
     private void ModeChanged(object sender, RoutedEventArgs e)
@@ -102,6 +104,7 @@ namespace KeyboardBacklightForLenovo
 
       _model.DayStart = _dtStart.Value.TimeOfDay;
       _model.DayEnd = _dtEnd.Value.TimeOfDay;
+      _model.NightLightDebugLogging = chkNightLightLogging.IsChecked == true;
 
       TraySettingsStore.Save(_model);
       DialogResult = true;

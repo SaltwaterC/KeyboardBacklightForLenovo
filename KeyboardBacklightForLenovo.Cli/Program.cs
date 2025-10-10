@@ -63,6 +63,10 @@ internal static class Program
         case "night-light":
           return CmdNightLight();
 
+        case "watch-night-light":
+        case "night-light-watch":
+          return CmdWatchNightLight();
+
         case "close-tray":
         case "tray-close":
           {
@@ -101,6 +105,7 @@ internal static class Program
     Console.WriteLine("  reset [--drivers <path-to-DriversConfig.json>]");
     Console.WriteLine("  watch [--drivers <path-to-DriversConfig.json>]");
     Console.WriteLine("  night-light");
+    Console.WriteLine("  watch-night-light");
     Console.WriteLine("  close-tray [--name BacklightTrayApp] [--timeout 5]");
     Console.WriteLine();
     Console.WriteLine("A JSON driver config file is REQUIRED.");
@@ -178,6 +183,69 @@ internal static class Program
     var nightLight = new NightLight();
     Console.WriteLine($"Night light supported: {nightLight.Supported}");
     Console.WriteLine($"Night light state: {nightLight.Enabled}");
+    return 0;
+  }
+
+  private static int CmdWatchNightLight()
+  {
+    void Log(string message) => Console.WriteLine($"[diag] {message}");
+
+    var nightLight = new NightLight(Log);
+    Console.WriteLine("Watching Night light state. Press Ctrl+C to exit.");
+    Console.WriteLine($"Supported: {nightLight.Supported}");
+
+    bool initialState;
+    try
+    {
+      initialState = nightLight.Enabled;
+      Console.WriteLine($"Initial Night light state: {initialState}");
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"Initial Night light state: <error> {ex.Message}");
+      initialState = false;
+    }
+
+    using var exit = new ManualResetEvent(false);
+    ConsoleCancelEventHandler? cancelHandler = null;
+    cancelHandler = (_, e) =>
+    {
+      e.Cancel = true;
+      exit.Set();
+    };
+    Console.CancelKeyPress += cancelHandler;
+
+    EventHandler? changedHandler = null;
+    changedHandler = (_, __) =>
+    {
+      try
+      {
+        bool state = nightLight.Enabled;
+        Console.WriteLine($"[{DateTime.Now:O}] Night light state changed -> {state}");
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"[{DateTime.Now:O}] Night light state change -> error: {ex.Message}");
+      }
+    };
+
+    nightLight.Changed += changedHandler;
+    nightLight.StartWatching();
+
+    try
+    {
+      exit.WaitOne();
+    }
+    finally
+    {
+      nightLight.StopWatching();
+      if (changedHandler is not null)
+        nightLight.Changed -= changedHandler;
+      if (cancelHandler is not null)
+        Console.CancelKeyPress -= cancelHandler;
+    }
+
+    Console.WriteLine("Night light watcher stopped.");
     return 0;
   }
 
