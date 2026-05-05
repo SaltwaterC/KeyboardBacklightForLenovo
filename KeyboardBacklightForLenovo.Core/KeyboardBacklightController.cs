@@ -27,11 +27,13 @@ namespace KeyboardBacklightForLenovo
       var configs = LoadDriverConfigs(configPath);
 
       Exception? lastError = null;
+      var tried = new List<string>();
       foreach (var cfg in configs)
       {
+        SafeFileHandle? h = null;
         try
         {
-          var h = CreateFile(
+          h = CreateFile(
               cfg.Principal,
               FileAccess.ReadWrite,
               FileShare.ReadWrite,
@@ -42,6 +44,7 @@ namespace KeyboardBacklightForLenovo
 
           if (!h.IsInvalid)
           {
+            _ = GetStatus(cfg, h);
             _driver = cfg;
             _handle = h;
             return;
@@ -50,37 +53,45 @@ namespace KeyboardBacklightForLenovo
           int err = Marshal.GetLastWin32Error();
           lastError = new Win32Exception(err, $"Open {cfg.Principal} failed");
           h.Dispose();
+          tried.Add($"{Describe(cfg)}: open failed ({lastError.Message})");
         }
         catch (Exception ex)
         {
           lastError = ex;
+          tried.Add($"{Describe(cfg)}: {ex.Message}");
+          h?.Dispose();
         }
       }
 
       throw new InvalidOperationException(
-          $"No supported keyboard backlight driver found. Tried: {string.Join(", ", configs.Select(c => c.Principal))}",
+          $"No supported keyboard backlight driver found. Tried: {string.Join("; ", tried)}",
           lastError
       );
     }
 
     public int GetStatus()
     {
+      return GetStatus(_driver, _handle);
+    }
+
+    private static int GetStatus(DriverConfig driver, SafeFileHandle handle)
+    {
       // For EnergyDrv, GET requires a 4-byte function code in the input buffer.
       byte[]? inBuf = null;
       int inLen = 0;
-      if (_driver.GetIn.HasValue)
+      if (driver.GetIn.HasValue)
       {
-        inBuf = BitConverter.GetBytes(_driver.GetIn.Value);
+        inBuf = BitConverter.GetBytes(driver.GetIn.Value);
         inLen = inBuf.Length; // 4 bytes
       }
 
       // NOTE: Allocate a larger out buffer (16 bytes) like the working probe.
       byte[] outBuf = new byte[16];
 
-      if (!DeviceIoControl(_handle, _driver.GetIoctl, inBuf, inLen, outBuf, outBuf.Length, out int br, IntPtr.Zero))
+      if (!DeviceIoControl(handle, driver.GetIoctl, inBuf, inLen, outBuf, outBuf.Length, out int br, IntPtr.Zero))
       {
         var err = Marshal.GetLastWin32Error();
-        throw new Win32Exception(err, $"DeviceIoControl(GET 0x{_driver.GetIoctl:X8}) failed");
+        throw new Win32Exception(err, $"DeviceIoControl(GET 0x{driver.GetIoctl:X8}) failed");
       }
 
       if (br < 4)
@@ -88,9 +99,9 @@ namespace KeyboardBacklightForLenovo
 
       uint raw = BitConverter.ToUInt32(outBuf, 0);
 
-      if (raw == _driver.GetOff) return LevelOff;
-      if (raw == _driver.GetLow) return LevelLow;
-      if (raw == _driver.GetHigh) return LevelHigh;
+      if (raw == driver.GetOff) return LevelOff;
+      if (raw == driver.GetLow) return LevelLow;
+      if (raw == driver.GetHigh) return LevelHigh;
 
       throw new InvalidOperationException($"Unknown GET status value: 0x{raw:X8}");
     }
@@ -211,6 +222,11 @@ namespace KeyboardBacklightForLenovo
       if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) return Convert.ToUInt32(s, 16);
       return Convert.ToUInt32(s, 10);
     }
+
+    private static string Describe(DriverConfig cfg) =>
+        string.IsNullOrWhiteSpace(cfg.Description)
+            ? cfg.Principal
+            : $"{cfg.Principal} ({cfg.Description})";
 
     private class DriverConfigJson
     {

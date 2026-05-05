@@ -23,5 +23,18 @@
     "setOff": "0x00000033",
     "setLow": "0x00010033",
     "setHigh": "0x00020033"
+  },
+  {
+    "principal": "\\\\.\\EnergyDrv",
+    "description": "ThinkBook/IdeaPad",
+    "getIoctl": "0x83102144",
+    "getIn": "0x00000032",
+    "getOff": "0x00010001",
+    "getLow": "0x00010003",
+    "getHigh": "0x00010005",
+    "setIoctl": "0x83102144",
+    "setOff": "0x00000033",
+    "setLow": "0x00010033",
+    "setHigh": "0x00020033"
   }
 ]

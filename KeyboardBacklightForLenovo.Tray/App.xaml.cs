@@ -205,7 +205,16 @@ namespace KeyboardBacklightForLenovo
 
 
       // Apply preferred to hardware (ResetStatus avoids unnecessary sets)
-      _controller.ResetStatus(_preferredCached);
+      try
+      {
+        _controller.ResetStatus(_preferredCached);
+      }
+      catch (Exception ex)
+      {
+        ShowDriverStartupFailureDialog(ex);
+        Shutdown();
+        return;
+      }
 
       // Initial sync from hardware (DO NOT persist)
       UpdateCheckedItemSafe(immediate: true);
@@ -255,6 +264,17 @@ namespace KeyboardBacklightForLenovo
       const string caption = "Keyboard Backlight Controller";
       string message =
           "Keyboard Backlight Controller for Lenovo could not find a supported driver backend (EnergyDrv or IBMPmDrv).\n" +
+          "The tray application will exit.\n\n" +
+          "Details: " + ex.Message;
+
+      System.Windows.MessageBox.Show(message, caption, MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+
+    private static void ShowDriverStartupFailureDialog(Exception ex)
+    {
+      const string caption = "Keyboard Backlight Controller";
+      string message =
+          "Keyboard Backlight Controller for Lenovo found a driver backend, but could not initialize it.\n" +
           "The tray application will exit.\n\n" +
           "Details: " + ex.Message;
 
