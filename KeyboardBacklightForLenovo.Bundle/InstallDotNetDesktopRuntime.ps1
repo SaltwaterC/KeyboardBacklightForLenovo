@@ -1,6 +1,6 @@
 # Requires: PowerShell 5.1
 param(
-  [string]$Channel = '10.0',
+  [string]$Channel = '__DOTNET_DESKTOP_RUNTIME_CHANNEL__',
   [ValidateSet('windowsdesktop')]
   [string]$Runtime = 'windowsdesktop',
   [ValidateSet('x64', 'x86')]
@@ -121,6 +121,9 @@ function To-HexString {
 
 try {
   if (-not $Architecture) { $Architecture = Get-OsArch }
+  if ([string]::IsNullOrWhiteSpace($Channel) -or $Channel -eq '__DOTNET_DESKTOP_RUNTIME_CHANNEL__') {
+    throw 'The .NET Desktop Runtime channel was not stamped into this installer shim.'
+  }
   $channelMajorMinor = ($Channel -split '\.')[0..1] -join '.'
 
   Write-Log "Channel: $Channel | Runtime: $Runtime | Arch: $Architecture"

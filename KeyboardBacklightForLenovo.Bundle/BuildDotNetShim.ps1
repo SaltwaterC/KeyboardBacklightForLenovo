@@ -37,7 +37,11 @@ function Compile-Shim {
   if ($Channel) {
     $script = [System.IO.File]::ReadAllText($In)
     $escapedChannel = $Channel.Replace("'", "''")
-    $script = $script -replace "\[string\]\`$Channel = '[^']+'", "[string]`$Channel = '$escapedChannel'"
+    $token = "'__DOTNET_DESKTOP_RUNTIME_CHANNEL__'"
+    if (-not $script.Contains($token)) {
+      throw "The installer shim source does not contain the .NET runtime channel token."
+    }
+    $script = $script.Replace($token, "'$escapedChannel'")
     $sourceForCompile = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "InstallDotNetDesktopRuntime-$Arch-$Channel.ps1")
     [System.IO.File]::WriteAllText($sourceForCompile, $script, [System.Text.UTF8Encoding]::new($false))
   }
