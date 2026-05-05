@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics; // EventLog, EntryWrittenEventArgs
 using Microsoft.Win32;     // SystemEvents, Power/Session events
 using System.Runtime.Versioning;

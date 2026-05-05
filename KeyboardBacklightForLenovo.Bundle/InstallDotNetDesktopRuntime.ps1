@@ -1,6 +1,6 @@
 # Requires: PowerShell 5.1
 param(
-  [string]$Channel = '8.0',
+  [string]$Channel = '10.0',
   [ValidateSet('windowsdesktop')]
   [string]$Runtime = 'windowsdesktop',
   [ValidateSet('x64', 'x86')]

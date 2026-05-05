@@ -1,8 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project>
   <PropertyGroup>
     <!-- Single source of truth -->
-    <ProductVersion>1.0.0</ProductVersion>
+    <ProductVersion>1.0.1</ProductVersion>
     <!-- Versions -->
     <Version>$(ProductVersion)</Version>
     <AssemblyVersion>$(ProductVersion).0</AssemblyVersion>
@@ -11,11 +11,20 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Company>SaltwaterC</Company>
     <Product>Keyboard Backlight for Lenovo</Product>
-    <Copyright>Copyright © 2025</Copyright>
+    <CopyrightYear>2026</CopyrightYear>
+    <CopyrightHolder>Ștefan Rusu</CopyrightHolder>
+    <Copyright>Copyright © $(CopyrightYear) $(CopyrightHolder)</Copyright>
     <RootNamespace>KeyboardBacklightForLenovo</RootNamespace>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <DotNetVersion>10.0</DotNetVersion>
+    <AppTargetFramework>net$(DotNetVersion)-windows</AppTargetFramework>
+    <DotNetDesktopRuntimeChannel>$(DotNetVersion)</DotNetDesktopRuntimeChannel>
+    <WixToolsetVersion>7.0.0</WixToolsetVersion>
+    <WixEulaId>wix7</WixEulaId>
     <Platforms>x64;x86</Platforms>
     <RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' != '.wixproj'">
+    <TargetFramework>$(AppTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

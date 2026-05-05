@@ -3,6 +3,48 @@ param(
   [switch]$Check
 )
 
+$binaryExtensions = @(
+  '.dll',
+  '.exe',
+  '.gif',
+  '.ico',
+  '.jpg',
+  '.jpeg',
+  '.msi',
+  '.pdb',
+  '.png',
+  '.rtf'
+)
+
+function Get-TrackedTextFiles {
+  git ls-files | Where-Object {
+    $extension = [System.IO.Path]::GetExtension($_).ToLowerInvariant()
+    $binaryExtensions -notcontains $extension
+  }
+}
+
+function Test-CrlfLineEndings {
+  param([string]$Path)
+
+  $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $Path))
+  for ($i = 0; $i -lt $bytes.Length; $i++) {
+    if ($bytes[$i] -eq 10 -and ($i -eq 0 -or $bytes[$i - 1] -ne 13)) {
+      return $false
+    }
+  }
+  return $true
+}
+
+function Normalize-CrlfLineEndings {
+  param([string]$Path)
+
+  $resolved = Resolve-Path -LiteralPath $Path
+  $content = [System.IO.File]::ReadAllText($resolved)
+  $content = $content -replace "`r?`n", "`r`n"
+  if (-not $content.EndsWith("`r`n")) { $content += "`r`n" }
+  [System.IO.File]::WriteAllText($resolved, $content, [System.Text.UTF8Encoding]::new($false))
+}
+
 function Ensure-PSScriptAnalyzer {
   if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
     Write-Host "Installing PSScriptAnalyzer module..."
@@ -112,6 +154,22 @@ Get-ChildItem -Recurse -Include $xmlPatterns -File | Where-Object { $_.FullName 
   $writer = [System.Xml.XmlWriter]::Create($_.FullName, $settings)
   $xml.Save($writer)
   $writer.Close()
+}
+
+$lineEndingFailures = @()
+foreach ($file in Get-TrackedTextFiles) {
+  if ($Check) {
+    if (-not (Test-CrlfLineEndings -Path $file)) {
+      $lineEndingFailures += $file
+    }
+  }
+  else {
+    Normalize-CrlfLineEndings -Path $file
+  }
+}
+
+if ($lineEndingFailures) {
+  Write-Error "Files do not use CRLF line endings:`n$($lineEndingFailures -join "`n")" -ErrorAction Stop
 }
 
 if ($Check) {

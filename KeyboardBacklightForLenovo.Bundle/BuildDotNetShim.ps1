@@ -1,7 +1,8 @@
 param(
   [string]$ProjectDir,
   [ValidateSet('x86', 'x64')]
-  [string]$Arch
+  [string]$Arch,
+  [string]$Channel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -22,17 +23,27 @@ function Compile-Shim {
   param(
     [string]$In,
     [string]$Out,
-    [string]$Arch
+    [string]$Arch,
+    [string]$Channel
   )
-  Write-Host "[build-shim] Compiling shim: $In -> $Out ($Arch)"
+  Write-Host "[build-shim] Compiling shim: $In -> $Out ($Arch, .NET channel $Channel)"
   # Import module in current session
   Import-Module ps2exe -ErrorAction Stop
   if (-not (Test-Path (Split-Path $Out -Parent))) {
     New-Item -ItemType Directory -Path (Split-Path $Out -Parent) -Force | Out-Null
   }
 
+  $sourceForCompile = $In
+  if ($Channel) {
+    $script = [System.IO.File]::ReadAllText($In)
+    $escapedChannel = $Channel.Replace("'", "''")
+    $script = $script -replace "\[string\]\`$Channel = '[^']+'", "[string]`$Channel = '$escapedChannel'"
+    $sourceForCompile = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "InstallDotNetDesktopRuntime-$Arch-$Channel.ps1")
+    [System.IO.File]::WriteAllText($sourceForCompile, $script, [System.Text.UTF8Encoding]::new($false))
+  }
+
   $ps2args = @{
-    inputFile  = $In
+    inputFile  = $sourceForCompile
     outputFile = $Out
     noConsole  = $true
     title      = 'Install .NET Desktop Runtime'
@@ -45,7 +56,14 @@ function Compile-Shim {
     default { throw "Unsupported arch: $Arch" }
   }
 
-  Invoke-ps2exe @ps2args
+  try {
+    Invoke-ps2exe @ps2args
+  }
+  finally {
+    if ($sourceForCompile -ne $In) {
+      Remove-Item -LiteralPath $sourceForCompile -Force -ErrorAction SilentlyContinue
+    }
+  }
 }
 
 $proj = if ($ProjectDir) { $ProjectDir } else { $PSScriptRoot }
@@ -64,6 +82,7 @@ $proj = $proj.Trim('"')
 $proj = [System.IO.Path]::GetFullPath($proj)
 
 if (-not $Arch) { throw 'Arch parameter is required' }
+if (-not $Channel) { throw 'Channel parameter is required' }
 
 $src = [System.IO.Path]::Combine($proj, 'InstallDotNetDesktopRuntime.ps1')
 $dstDir = [System.IO.Path]::Combine($proj, 'External')
@@ -71,7 +90,7 @@ if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Forc
 $dst = [System.IO.Path]::Combine($dstDir, "InstallDotNetDesktopRuntime-$Arch.exe")
 
 Ensure-Ps2Exe
-Compile-Shim -In $src -Out $dst -Arch $Arch
+Compile-Shim -In $src -Out $dst -Arch $Arch -Channel $Channel
 
 $verify = [System.IO.Path]::Combine((Split-Path $proj -Parent), 'VerifyArch.ps1')
 & $verify -Expected $Arch -Exe $dst

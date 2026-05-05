@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
   <?include "GeneratedVariables.wxi" ?>
   <?include "GeneratedVariablesService.wxi" ?>
@@ -59,7 +59,7 @@
   <Fragment>
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="DriversConfig" Guid="aa2d9581-811d-413b-a975-30a65cb183f8">
-        <File Id="DriverConfig.json" Source="$(SolutionDir)bin\$(Platform)\Publish\DriversConfig.json" />
+        <File Id="DriverConfig.json" Source="$(SolutionDir)$(var.RootNamespace).Core\DriversConfig.json" />
       </Component>
     </DirectoryRef>
   </Fragment>

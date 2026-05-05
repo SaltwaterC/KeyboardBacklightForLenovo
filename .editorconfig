@@ -1,6 +1,10 @@
-# Line endings and formatting for VS-friendly CRLF
-[*.{cs,csx,xaml,csproj,wixproj,props,targets,wxs,wxl,proj,vcxproj,ps1,psm1,xml}]
+root = true
+
+# Line endings and formatting for VS-friendly CRLF.
+[*]
+end_of_line = crlf
+insert_final_newline = true
+
+[*.{cs,csx,xaml,csproj,wixproj,props,targets,wxs,wxl,proj,vcxproj,ps1,psm1,xml,json,md,sln}]
 indent_style = space
 indent_size = 2
-insert_final_newline = true
-end_of_line = crlf

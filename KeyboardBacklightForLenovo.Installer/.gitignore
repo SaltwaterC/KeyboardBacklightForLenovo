@@ -3,3 +3,4 @@ obj/*
 *.csproj.user
 *.pubxml.user
 Generated*.wxi
+LICENSE.rtf

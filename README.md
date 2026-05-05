@@ -16,7 +16,7 @@ The auto mode suspends persistence: the keyboard backlight is set to the day or 
 
 Fetch a release bundle and run. The bundle has 3 components:
 
-- .NET desktop runtime installer needed to run this software. This only runs when the latest 8.0 is not installed.
+- .NET desktop runtime installer needed to run this software. This only runs when the configured runtime channel is not installed.
 - [ScreenStateService](https://github.com/SaltwaterC/ScreenStateService) to detect power events when laptop screen turns on.
 - The collection of software from this project.
 
@@ -29,7 +29,7 @@ Fetch a release bundle and run. The bundle has 3 components:
 If .NET does not show up in Settings » Apps, run this from command prompt (Win+R » cmd.exe):
 
 ```sh
-winget uninstall --id Microsoft.DotNet.DesktopRuntime.8
+winget uninstall --id Microsoft.DotNet.DesktopRuntime.10
 ```
 
 ## Under the bonnet

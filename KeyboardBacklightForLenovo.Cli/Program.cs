@@ -1,4 +1,4 @@
-﻿// Generic, JSON-driven CLI for ThinkPad/ThinkBook keyboard backlight
+// Generic, JSON-driven CLI for ThinkPad/ThinkBook keyboard backlight
 // Requires a JSON config file on disk (default: DriversConfig.json next to the EXE).
 
 using System;

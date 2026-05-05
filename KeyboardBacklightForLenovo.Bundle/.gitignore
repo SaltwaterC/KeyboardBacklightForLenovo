@@ -1,5 +1,5 @@
-bin/*
-obj/*
-*.csproj.user
-External/*.exe
-External/*.msi
+LICENSE.rtf
+bin/
+obj/
+External/*
+!External/.gitkeep
