@@ -122,6 +122,7 @@ internal static class Program
       0 => "Off",
       1 => "Low",
       2 => "High",
+      3 => "Auto",
       _ => "Unknown"
     };
     Console.WriteLine($"principal={ctrl.Principal} ({ctrl.Description})  mapped={mapped} ({lvl})  store={PreferredLevelStore.StorePath}");
