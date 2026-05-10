@@ -15,6 +15,7 @@ namespace KeyboardBacklightForLenovo
     public const int LevelOff = 0;
     public const int LevelLow = 1;
     public const int LevelHigh = 2;
+    public const int LevelAuto = 3;
 
     private readonly DriverConfig _driver;
     private readonly SafeFileHandle _handle;
@@ -102,6 +103,7 @@ namespace KeyboardBacklightForLenovo
       if (raw == driver.GetOff) return LevelOff;
       if (raw == driver.GetLow) return LevelLow;
       if (raw == driver.GetHigh) return LevelHigh;
+      if (driver.GetAuto.HasValue && raw == driver.GetAuto.Value) return LevelAuto;
 
       throw new InvalidOperationException($"Unknown GET status value: 0x{raw:X8}");
     }
@@ -196,6 +198,7 @@ namespace KeyboardBacklightForLenovo
           GetOff = ParseU32(j.GetOff, nameof(j.GetOff)),
           GetLow = ParseU32(j.GetLow, nameof(j.GetLow)),
           GetHigh = ParseU32(j.GetHigh, nameof(j.GetHigh)),
+          GetAuto = ParseU32Nullable(j.GetAuto),
           SetOff = ParseU32(j.SetOff, nameof(j.SetOff)),
           SetLow = ParseU32(j.SetLow, nameof(j.SetLow)),
           SetHigh = ParseU32(j.SetHigh, nameof(j.SetHigh)),
@@ -237,6 +240,7 @@ namespace KeyboardBacklightForLenovo
       public string? GetOff { get; set; }
       public string? GetLow { get; set; }
       public string? GetHigh { get; set; }
+      public string? GetAuto { get; set; }
       public string? SetIoctl { get; set; }
       public string? SetOff { get; set; }
       public string? SetLow { get; set; }
@@ -253,6 +257,7 @@ namespace KeyboardBacklightForLenovo
       public uint GetOff { get; set; }
       public uint GetLow { get; set; }
       public uint GetHigh { get; set; }
+      public uint? GetAuto { get; set; }
       public uint SetOff { get; set; }
       public uint SetLow { get; set; }
       public uint SetHigh { get; set; }
