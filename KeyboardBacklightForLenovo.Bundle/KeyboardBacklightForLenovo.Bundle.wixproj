@@ -25,6 +25,10 @@
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)\FetchScreenStateService.ps1&quot; -OutDir &quot;$(MSBuildThisFileDirectory)\External&quot; -Arch &quot;$(Platform)&quot;" />
   </Target>
   <!-- No build-time versioning; shim resolves latest LTS at install time. -->
+  <Target Name="TestDotNetShimStamping" BeforeTargets="BuildDotNetShim">
+    <Message Text="Testing .NET Desktop Runtime shim stamping..." Importance="high" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)\TestDotNetShimStamping.ps1&quot; -ProjectDir &quot;$(MSBuildThisFileDirectory).&quot; -Channel &quot;$(DotNetDesktopRuntimeChannel)&quot;" />
+  </Target>
   <Target Name="BuildDotNetShim" BeforeTargets="PrepareForBuild">
     <Message Text="Building .NET Desktop Runtime shim..." Importance="high" />
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)\BuildDotNetShim.ps1&quot; -ProjectDir &quot;$(MSBuildThisFileDirectory).&quot; -Arch &quot;$(Platform)&quot; -Channel &quot;$(DotNetDesktopRuntimeChannel)&quot;" />
@@ -40,6 +44,7 @@
   <ItemGroup>
     <None Include="BuildDotNetShim.ps1" />
     <None Include="InstallDotNetDesktopRuntime.ps1" />
+    <None Include="TestDotNetShimStamping.ps1" />
   </ItemGroup>
   <Target Name="VerifyBundleArch" AfterTargets="Build">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)VerifyArch.ps1&quot; -Expected &quot;$(Platform)&quot; -Exe &quot;$(TargetPath)&quot;" />

@@ -2,7 +2,7 @@
 <Project>
   <PropertyGroup>
     <!-- Single source of truth -->
-    <ProductVersion>1.0.1</ProductVersion>
+    <ProductVersion>1.0.2</ProductVersion>
     <!-- Versions -->
     <Version>$(ProductVersion)</Version>
     <AssemblyVersion>$(ProductVersion).0</AssemblyVersion>
